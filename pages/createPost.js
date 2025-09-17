@@ -49,7 +49,7 @@ export default function CreatePost(){
                 <br/>
                 Content: &nbsp; &nbsp; &nbsp; &nbsp;
           
-                <textarea classname={errors.content && "inputError"} placeholder="Here is a simple recipe to make a delicious meat lovers pizza: ..."
+                <textarea className={errors.content && "inputError"} placeholder="Here is a simple recipe to make a delicious meat lovers pizza: ..."
                     style={{
                         color:'black',
                         backgroundColor: 'transparent', 
