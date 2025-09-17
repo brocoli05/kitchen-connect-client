@@ -18,7 +18,7 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>KITCHEN CONNECT</title>
+        <title>Kitchen Connect</title>
       </Head>
       <div
         className={`${styles.page} ${geistSans.variable} ${geistMono.variable}`}
