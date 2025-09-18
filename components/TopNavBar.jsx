@@ -15,7 +15,7 @@ export default function TopNavBar({}) {
         <a href="/settings">...</a>
         <a href="/share">Share</a>
         <a href="/profile/edit">
-          <img src={"/Avatar.g"} alt="User Avatar" />
+          <img src={"/Avatar.png"} alt="User Avatar" />
         </a>
       </Col>
     </Row>
