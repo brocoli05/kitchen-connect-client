@@ -67,7 +67,6 @@ export default function TopNavBar({}) {
           </a>
         </Col>
       </Row>
-      <hr />
     </div>
   );
 }

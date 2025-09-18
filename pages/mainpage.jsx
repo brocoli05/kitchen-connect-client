@@ -4,22 +4,13 @@ import "../styles/main.css";
 import { Row, Col } from "react-bootstrap";
 import { useState } from "react";
 import Feed from "@/components/Feed";
+import "../styles/mainpage.css";
 // ToggleList component for collapsible menu
 function ToggleList({ title }) {
   const [open, setOpen] = useState(true);
   return (
     <div className="mainpage-left-toggle-list">
-      <button
-        onClick={() => setOpen((prev) => !prev)}
-        style={{
-          color: "black",
-          marginBottom: "8px",
-          padding: "6px 16px",
-          borderRadius: "4px",
-          cursor: "pointer",
-          fontWeight: "bold",
-        }}
-      >
+      <button onClick={() => setOpen((prev) => !prev)} className="list-title">
         {title}
       </button>
       {open && title === "Discover" && (
@@ -71,16 +62,16 @@ function ToggleList({ title }) {
 function Contact({ user }) {
   return (
     <Row>
-      <Col>
+      <Col md={4}>
         <img
           src={user.avatarUrl}
           alt="Avatar"
-          style={{ width: 50, height: 50, borderRadius: 25 }}
+          className="profile-contact-img"
         />
       </Col>
-      <Col>
-        <p>{user.userName}</p>
-        <p>{user.bio}</p>
+      <Col md={8}>
+        <p className="profile-contact-name">{user.userName}</p>
+        <p className="profile-contact-bio">{user.bio}</p>
       </Col>
     </Row>
   );
@@ -96,40 +87,47 @@ export default function Home() {
     <>
       <TopNavBar />
       <Row className="mainpage">
-        <Col className="mainpage-left">
-          <p style={{ fontWeight: "bold", fontSize: "24px" }}>Feed</p>
+        <Col md={2} className="mainpage-left">
+          <p className="left-right-title">Feed</p>
           <ToggleList title="Discover" />
           <ToggleList title="Personal" />
           <ToggleList title="Kitchen" />
-          <Row>
-            <button className="post-button">Post</button>
+          <Row className="d-flex justify-content-center">
+            <button className="post-button ">Post</button>
           </Row>
         </Col>
 
-        <Col className="mainpage-center">
-          <Row>
+        <Col md={7} className="mainpage-center ">
+          <Row className="quick-post d-flex justify-content-center m-1">
             {/* quick post */}
-            <Col>
+            <Col
+              md={10}
+              className="d-flex align-items-center quick-post"
+              style={{ border: "none" }}
+            >
               <input
                 type="text"
                 placeholder="What's on your mind?"
-                style={{ width: "100%", padding: "8px", borderRadius: "4px" }}
+                style={{ width: "100%", border: "none", borderRadius: "4px" }}
               />
             </Col>
-            <Col>
-              <button className="post-button">Post</button>
+            <Col md={2} className="d-flex justify-content-end">
+              <img src={"/mic.svg"} alt="mic" />
+              <img src={"/mood.svg"} alt="mood" />
+              <img src={"/photo.svg"} alt="photo" />
             </Col>
           </Row>
-          <Feed />
+          <Row className="m-5 d-flex justify-content-center">
+            <Feed kind="normal" />
+          </Row>
         </Col>
-        <Col className="mainpage-right">
-          <p style={{ fontWeight: "bold", fontSize: "24px" }}>Suggested</p>
-          <Row>
-            <Feed />
+        <Col md={3} className="mainpage-right p-3">
+          <p className="left-right-title">Suggested</p>
+          <Row className="feed-row d-flex justify-content-start">
+            <Feed kind="suggested" />
           </Row>
           <Row>
             <p style={{ fontWeight: "bold", fontSize: "24px" }}>Contacts</p>
-            {/* should connect to different users */}
             <Contact user={testUser} />
           </Row>
         </Col>
