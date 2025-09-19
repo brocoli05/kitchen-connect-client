@@ -5,6 +5,8 @@ import { Row, Col } from "react-bootstrap";
 import { useState } from "react";
 import Feed from "@/components/Feed";
 import "../styles/mainpage.css";
+import { useRouter } from "next/router";
+
 // ToggleList component for collapsible menu
 function ToggleList({ title }) {
   const [open, setOpen] = useState(true);
@@ -83,6 +85,7 @@ const testUser = {
   bio: "Let's go",
 };
 export default function Home() {
+  const router = useRouter();
   return (
     <>
       <TopNavBar />
@@ -93,7 +96,12 @@ export default function Home() {
           <ToggleList title="Personal" />
           <ToggleList title="Kitchen" />
           <Row className="d-flex justify-content-center">
-            <button className="post-button ">Post</button>
+            <button
+              className="post-button "
+              onClick={() => router.push("/createPost")}
+            >
+              Post
+            </button>
           </Row>
         </Col>
 
