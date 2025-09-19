@@ -1,10 +1,28 @@
+/* Feed interaction button: transparent by default, black on hover */
+.feed-action-btn {
+  background: transparent;
+  border: none;
+  color: #222;
+  font-weight: 500;
+  padding: 6px 16px;
+  border-radius: 6px;
+  transition: background 0.2s, color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.feed-action-btn:hover,
+.feed-action-btn:focus {
+  background: #222;
+  color: #fff;
+}
 /* src/styles/main.css */
 @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700&display=swap");
 
 :root {
   --primary-color: #010101;
   --secondary-color: #4682b4;
-  --background-color: #f4f7f6;
+  --background-color: #ffffff;
   --text-color: #333;
   --light-text-color: #666;
   --border-color: #ddd;
