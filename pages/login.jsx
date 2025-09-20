@@ -4,7 +4,7 @@ import AuthForm from "../components/AuthForm";
 import api from "../utils/api";
 
 const LoginPage = () => {
-  const router = useRouter(); // Next.js 라우터 훅
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -12,7 +12,7 @@ const LoginPage = () => {
     const { email, password } = formData;
 
     // --- TEST CREDENTIALS ---
-    if (email === "test@example.com" && password === "password123") {
+    if (email === "test@example.com" && password === "test") {
       if (typeof window !== "undefined") {
         localStorage.setItem("token", "dev-token");
       }
