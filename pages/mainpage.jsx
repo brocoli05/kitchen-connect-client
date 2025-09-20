@@ -1,10 +1,8 @@
 import TopNavBar from "@/components/TopNavBar";
 import React from "react";
-import "../styles/main.css";
 import { Row, Col } from "react-bootstrap";
 import { useState } from "react";
 import Feed from "@/components/Feed";
-import "../styles/mainpage.css";
 import { useRouter } from "next/router";
 
 // ToggleList component for collapsible menu

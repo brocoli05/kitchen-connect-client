@@ -1,6 +1,5 @@
-"use client";
 import { useState } from "react";
-import s from "./profile-edit.module.css";
+import s from "@/styles/profile-edit.module.css";
 
 export default function ProfileEditPage() {
   const [form, setForm] = useState({
