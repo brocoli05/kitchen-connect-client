@@ -1,0 +1,104 @@
+.page{
+    margin-top: 30px;
+    margin-left: 290px;
+    font-size: 18px;
+}
+
+.form{
+    margin-top: 40px;
+    margin-left: 290px;
+}
+
+.title{
+    color: black;
+    background-color: transparent;
+    border: 1px solid #ccc;
+    width: 910px;
+    height: 40px;
+    border-radius: 8px;
+    padding-left: 10px;
+    padding-top: 5px;
+    vertical-align: top;
+    resize: none;
+}
+
+.titleError{
+    color: red;
+    font-size: 12px;
+    margin-top: 5px;
+    margin-left: 100px;
+    display: block;
+}
+
+.titleError2{
+    color: red;
+    font-size: 12px;
+    margin-top: 5px;
+    margin-left: 100px;
+    display: block;
+}
+
+.content{
+    color: black;
+    background-color: transparent;
+    border: 1px solid #ccc;
+    width: 910px;
+    height: 560px;
+    border-radius: 8px;
+    padding-left: 10px;
+    padding-top: 10px;
+    vertical-align: top;
+    resize: none;
+}
+
+.contentError{
+    color: red;
+    font-size: 12px;
+    margin-top: 5px;
+    margin-left: 100px;
+    display: block;
+}
+
+.buttonGap{
+    gap: 15px;
+    padding-right: 630px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.file{
+    display:none;
+}
+
+.uploadButton{
+    color: black;
+    padding: 0 10px;
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+.uploadButtonGrey{
+    background-color: #44404046;
+}
+
+.uploadButtonGreen{
+    background-color: #7cd899a6;
+}
+
+.cancelButton{
+    color: black;
+    background-color: #EEEEEE;
+    width: 85px;
+    height: 40px;
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+.submitButton{
+    color: white;
+    background-color: black;
+    width: 85px;
+    height: 40px;
+    border-radius: 8px;
+    font-size: 16px
+}

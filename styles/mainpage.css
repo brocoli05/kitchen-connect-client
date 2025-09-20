@@ -1,0 +1,60 @@
+.mainpage-left {
+  opacity: 1;
+  border-right-width: 1px;
+  padding-left: 40px;
+}
+
+.left-right-title {
+  font-weight: bold;
+  font-size: 24px;
+}
+.mainpage-left-toggle-list {
+  width: 240px;
+}
+.list-title {
+  color: black;
+  margin-bottom: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  background-color: transparent;
+}
+
+.post-button {
+  width: 67px;
+  height: 40px;
+  border-radius: 10px;
+  background-color: #000000;
+  color: white;
+}
+.quick-post {
+  /* width: 100%; */
+  border: 15px solid #e0e0e0;
+  border-radius: 8px;
+}
+.mainpage-left,
+.mainpage-right,
+.mainpage-center {
+  border: 1px solid #e0e0e0;
+  padding-top: 10px;
+}
+.profile-contact-img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+}
+.profile-contact-name {
+  font-weight: bold;
+  font-size: 18px;
+  margin: 0;
+  justify-content: start;
+}
+.profile-contact-bio {
+  font-size: 14px;
+  color: gray;
+  margin: 0;
+}
+.feed-row {
+  max-width: 240px;
+  padding-left: 20px;
+}

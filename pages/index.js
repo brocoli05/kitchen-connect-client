@@ -1,5 +1,6 @@
 import Head from "next/head";
-import Image from "next/image";
+import { useEffect } from "react";
+import { useRouter } from "next/router";
 import { Geist, Geist_Mono } from "next/font/google";
 import styles from "@/styles/Home.module.css";
 import Link from "next/link";
@@ -15,20 +16,22 @@ const geistMono = Geist_Mono({
 });
 
 export default function Home() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/login");
+  }, [router]);
+
   return (
     <>
       <Head>
-        <title>KITCHEN CONNECT</title>
+        <title>Kitchen Connect</title>
       </Head>
       <div
         className={`${styles.page} ${geistSans.variable} ${geistMono.variable}`}
       >
         <main className={styles.main}>
-          <div className={styles.ctas}>
-            <button>
-              <Link href="/createPost">Create Post</Link>
-            </button>
-          </div>
+          <div className={styles.ctas}>&quot;Loading login page...&quot;</div>
         </main>
       </div>
     </>

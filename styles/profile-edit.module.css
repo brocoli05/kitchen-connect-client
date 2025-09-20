@@ -1,0 +1,20 @@
+.page { min-height: 100vh; background:#f9fafb; color:#111827; }
+.wrap { max-width: 96rem; margin:0 auto; padding:2.5rem 1.5rem; }
+.card { background:#fff; border:1px solid #e5e7eb; border-radius:16px; overflow:hidden; }
+.cardHead { padding:1.25rem 1.5rem; font-weight:600; font-size:20px; }
+.cardBody { display:grid; gap:2rem; grid-template-columns:1fr; padding:2rem 1.5rem; border-top:1px solid #e5e7eb; }
+@media (min-width:1024px){ .cardBody{ grid-template-columns: 1fr 3fr; } }
+
+.side nav a{ display:block; padding:.5rem .75rem; border-radius:8px; font-size:14px; color:#4b5563; }
+.side nav a.active{ background:#f3f4f6; color:#111827; font-weight:600; }
+
+.profile { display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; }
+.avatar { width:64px; height:64px; border-radius:999px; background:#e5e7eb; display:flex; align-items:center; justify-content:center; font-size:10px; color:#6b7280; }
+
+.form { max-width:36rem; }
+.label { display:block; margin-bottom:.25rem; font-size:14px; font-weight:500; }
+.input { width:100%; padding:.5rem .75rem; border:1px solid #e5e7eb; border-radius:10px; outline:none; }
+.input:focus{ border-color:#111827; box-shadow:0 0 0 2px rgba(17,24,39,.15); }
+
+.button { margin-top:1rem; padding:.625rem 1.25rem; background:#000; color:#fff; border:none; border-radius:999px; font-size:14px; font-weight:600; cursor:pointer; }
+.postBtn { margin-top:1.5rem; padding:.4rem .75rem; border:1px solid #e5e7eb; border-radius:6px; font-size:14px; background:#fff; }
