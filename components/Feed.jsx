@@ -1,5 +1,4 @@
 import React from "react";
-import "../styles/main.css";
 import { Row, Col } from "react-bootstrap";
 export default function Feed({ kind }) {
   return (

@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import "../styles/main.css";
 import { useRouter } from "next/router";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";

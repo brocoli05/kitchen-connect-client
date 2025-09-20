@@ -4,12 +4,21 @@ import AuthForm from "../components/AuthForm";
 import api from "../utils/api";
 
 const LoginPage = () => {
-  const router = useRouter(); // Next.js 라우터 훅
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleLogin = async (formData) => {
     const { email, password } = formData;
+
+    // --- TEST CREDENTIALS ---
+    if (email === "test@example.com" && password === "test123") {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("token", "dev-token");
+      }
+    router.push("/mainpage"); // after login
+    return;
+  }
 
     setIsLoading(true);
     setError("");
