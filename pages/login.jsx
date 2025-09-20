@@ -12,7 +12,7 @@ const LoginPage = () => {
     const { email, password } = formData;
 
     // --- TEST CREDENTIALS ---
-    if (email === "test@example.com" && password === "test") {
+    if (email === "test@example.com" && password === "test123") {
       if (typeof window !== "undefined") {
         localStorage.setItem("token", "dev-token");
       }
