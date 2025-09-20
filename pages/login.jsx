@@ -11,6 +11,15 @@ const LoginPage = () => {
   const handleLogin = async (formData) => {
     const { email, password } = formData;
 
+    // --- TEST CREDENTIALS ---
+    if (email === "test@example.com" && password === "password123") {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("token", "dev-token");
+      }
+    router.push("/mainpage"); // after login
+    return;
+  }
+
     setIsLoading(true);
     setError("");
     try {
