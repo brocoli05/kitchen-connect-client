@@ -11,23 +11,17 @@ const LoginPage = () => {
   const handleLogin = async (formData) => {
     const { email, password } = formData;
 
-    // --- TEST CREDENTIALS ---
-    if (email === "test@example.com" && password === "test123") {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("token", "dev-token");
-      }
-    router.push("/mainpage"); // after login
-    return;
-  }
-
     setIsLoading(true);
     setError("");
+
     try {
       const res = await api.post("/login", { email, password });
+
       if (typeof window !== "undefined") {
         localStorage.setItem("token", res.data.token);
       }
-      router.push("/");
+
+      router.push("/mainpage");
     } catch (err) {
       console.error(
         "Login Failed:",
