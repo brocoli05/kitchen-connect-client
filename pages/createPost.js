@@ -1,5 +1,6 @@
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/router";
+import { useEffect } from "react";
 import TopNavBar from "@/components/TopNavBar";
 import st from "@/styles/createPost.module.css"
 import api from "../utils/api";
@@ -7,6 +8,16 @@ import api from "../utils/api";
 export default function CreatePost() {
 
   const router = useRouter();
+
+  // secure protection to make sure unauthenticated user can't come to the page
+  useEffect(()=>{
+     if (typeof window !== "undefined"){
+        const clientToken = localStorage.getItem("token");
+        if(!clientToken){
+          router.push("/login");
+        }
+      }
+  },[router])
 
   const {
     register,
@@ -24,10 +35,8 @@ export default function CreatePost() {
     console.log(title,content);
  
     try{
-      const create = await api.post("/createPost", {title,content});
-      if (typeof window !== "undefined"){
-        localStorage.setItem("token", create.data.token)
-      }
+      const clientToken = localStorage.getItem("token");
+      const create = await api.post("/createPost", {title,content},{headers:{Authorization: `Bearer ${clientToken}`}});
       router.push("/mainpage");
     }
     catch(error){
