@@ -14,7 +14,7 @@ export default function PostPage({ post, postId, notFound }) {
     );
   }
 
-  
+
   const [me, setMe] = useState(null);
   useEffect(() => {
     let ignore = false;
@@ -23,7 +23,8 @@ export default function PostPage({ post, postId, notFound }) {
         const res = await fetch("/api/me");
         const data = await res.json();
         if (!ignore) setMe(data);
-      } catch {}
+      } catch {
+      }
     })();
     return () => {
       ignore = true;
@@ -37,7 +38,6 @@ export default function PostPage({ post, postId, notFound }) {
     if (!targetId) return;
     await fetch(`/api/posts/${targetId}/like`, { method: "POST" });
   };
-
   const repost = async () => {
     if (!targetId) return;
     await fetch(`/api/posts/${targetId}/repost`, { method: "POST" });
@@ -74,6 +74,7 @@ export default function PostPage({ post, postId, notFound }) {
       <article
         style={{
           whiteSpace: "pre-wrap",
+          fontFamily: "inherit",
           lineHeight: 1.6,
           background: "#fafafa",
           border: "1px solid #eee",
@@ -106,7 +107,7 @@ export async function getServerSideProps({ params, req }) {
     const post = await res.json();
     
     return { props: { post, postId: params.postId } };
-  } catch (e) {
+  } catch {
     return { props: { notFound: true } };
   }
 }
