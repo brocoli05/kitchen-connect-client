@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import PostActions from "@/components/PostActions";
 
-export default function PostPage({ post, notFound }) {
-  // handle 404 (based on result of SSR)
+export default function PostPage({ post, postId, notFound }) {
+  
   if (notFound) {
     return (
       <div style={{ padding: 24 }}>
@@ -30,13 +30,17 @@ export default function PostPage({ post, notFound }) {
     };
   }, []);
 
+  const targetId = post?.id ?? postId; 
   const isOwner = me?.id && post?.authorId && me.id === post.authorId;
 
   const like = async () => {
-    await fetch(`/api/posts/${post.id}/like`, { method: "POST" });
+    if (!targetId) return;
+    await fetch(`/api/posts/${targetId}/like`, { method: "POST" });
   };
+
   const repost = async () => {
-    await fetch(`/api/posts/${post.id}/repost`, { method: "POST" });
+    if (!targetId) return;
+    await fetch(`/api/posts/${targetId}/repost`, { method: "POST" });
   };
 
   const image = post?.imageUrl || post?.photo; 
@@ -80,7 +84,6 @@ export default function PostPage({ post, notFound }) {
         {post.content}
       </article>
 
-      
       <div style={{ marginTop: 12 }}>
         <PostActions isOwner={isOwner} onLike={like} onRepost={repost} />
       </div>
@@ -93,7 +96,6 @@ export default function PostPage({ post, notFound }) {
 }
 
 export async function getServerSideProps({ params, req }) {
-  
   const base =
     process.env.NEXT_PUBLIC_BASE_URL ||
     `http://${req?.headers?.host || "localhost:3000"}`;
@@ -102,7 +104,8 @@ export async function getServerSideProps({ params, req }) {
     const res = await fetch(`${base}/api/posts/${params.postId}`);
     if (!res.ok) return { props: { notFound: true } };
     const post = await res.json();
-    return { props: { post } };
+    
+    return { props: { post, postId: params.postId } };
   } catch (e) {
     return { props: { notFound: true } };
   }
