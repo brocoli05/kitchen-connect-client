@@ -1,7 +1,10 @@
 // pages/posts/[postId].jsx
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import PostActions from "@/components/PostActions";
 
 export default function PostPage({ post, notFound }) {
+  // handle 404 (based on result of SSR)
   if (notFound) {
     return (
       <div style={{ padding: 24 }}>
@@ -10,6 +13,31 @@ export default function PostPage({ post, notFound }) {
       </div>
     );
   }
+
+  
+  const [me, setMe] = useState(null);
+  useEffect(() => {
+    let ignore = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/me");
+        const data = await res.json();
+        if (!ignore) setMe(data);
+      } catch {}
+    })();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const isOwner = me?.id && post?.authorId && me.id === post.authorId;
+
+  const like = async () => {
+    await fetch(`/api/posts/${post.id}/like`, { method: "POST" });
+  };
+  const repost = async () => {
+    await fetch(`/api/posts/${post.id}/repost`, { method: "POST" });
+  };
 
   const image = post?.imageUrl || post?.photo; 
 
@@ -52,6 +80,11 @@ export default function PostPage({ post, notFound }) {
         {post.content}
       </article>
 
+      
+      <div style={{ marginTop: 12 }}>
+        <PostActions isOwner={isOwner} onLike={like} onRepost={repost} />
+      </div>
+
       <div style={{ marginTop: 16 }}>
         <Link href="/mainpage">Back to Home</Link>
       </div>
@@ -60,6 +93,7 @@ export default function PostPage({ post, notFound }) {
 }
 
 export async function getServerSideProps({ params, req }) {
+  
   const base =
     process.env.NEXT_PUBLIC_BASE_URL ||
     `http://${req?.headers?.host || "localhost:3000"}`;
