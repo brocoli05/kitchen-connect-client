@@ -24,12 +24,14 @@ export default function PostPage({ post, postId, notFound }) {
         const data = await res.json();
         if (!ignore) setMe(data);
       } catch {
+
       }
     })();
     return () => {
       ignore = true;
     };
-  }, []);
+   }, []);
+
 
   const targetId = post?.id ?? postId; 
   const isOwner = me?.id && post?.authorId && me.id === post.authorId;
@@ -80,6 +82,7 @@ export default function PostPage({ post, postId, notFound }) {
           border: "1px solid #eee",
           borderRadius: 8,
           padding: 16,
+
         }}
       >
         {post.content}
