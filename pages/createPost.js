@@ -30,6 +30,7 @@ export default function CreatePost() {
     },
   });
 
+  // When the post button is clicked
   const submitForm = async (data) => {
     const {title,content} = data;
     console.log(title,content);
