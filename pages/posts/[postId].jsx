@@ -69,19 +69,19 @@ export default function PostPage({ post, postId, notFound }) {
         />
       )}
 
-      <article
-        style={{
-          whiteSpace: "pre-wrap",
-          fontFamily: "inherit",
-          lineHeight: 1.6,
-          background: "#fafafa",
-          border: "1px solid #eee",
-          borderRadius: 8,
-          padding: 16,
-        }}
-      >
-        {post.content}
-      </article>
+<article
+  style={{
+    whiteSpace: "pre-wrap",
+    fontFamily: "inherit",
+    lineHeight: 1.6,
+    background: "#fafafa",
+    border: "1px solid #eee",
+    borderRadius: 8,
+    padding: 16,
+  }}
+>
+  {post.content}
+</article>
 
       <div style={{ marginTop: 12 }}>
         <PostActions isOwner={isOwner} onLike={like} onRepost={repost} />
