@@ -1,14 +1,27 @@
 import { useForm } from "react-hook-form";
-import { useEffect } from "react";
-import Link from "next/link";
 import { useRouter } from "next/router";
+import { useEffect } from "react";
 import TopNavBar from "@/components/TopNavBar";
+import st from "@/styles/createPost.module.css"
+import api from "../utils/api";
 
 export default function CreatePost() {
+
+  const router = useRouter();
+
+  // secure protection to make sure unauthenticated user can't come to the page
+  useEffect(()=>{
+     if (typeof window !== "undefined"){
+        const clientToken = localStorage.getItem("token");
+        if(!clientToken){
+          router.push("/login");
+        }
+      }
+  },[router])
+
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -17,141 +30,92 @@ export default function CreatePost() {
     },
   });
 
-  function submitForm(data) {
-    console.log(data);
+  // When the post button is clicked
+  const submitForm = async (data) => {
+    const {title,content} = data;
+    console.log(title,content);
+ 
+    try{
+      const clientToken = localStorage.getItem("token");
+      const create = await api.post("/createPost", {title,content},{headers:{Authorization: `Bearer ${clientToken}`}});
+      router.push("/mainpage");
+    }
+    catch(error){
+      console.error("Failed to post", error.response ? error.response.data : error.message);
+    }
   }
 
-  const router = useRouter();
   const cancelButton = () => {
-    router.push("/");
+    router.push("/mainpage");
   };
 
   return (
     <>
       <TopNavBar />
-      <p style={{ marginTop: "70px", marginLeft: "290px", fontSize: "18px" }}>
+      <p className={st.page}>
         <b>Writing a Post</b>
       </p>
+
       <form
         onSubmit={handleSubmit(submitForm)}
-        style={{ marginTop: "40px", marginLeft: "290px" }}
+        className={st.form}
       >
         Title: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
         <textarea
-          className={errors.title && "inputError"}
+          className={`${st.title} ${errors.title ? "inputError" : ""}`}
           placeholder="Homemade Meat Lovers Pizza"
-          style={{
-            color: "black",
-            backgroundColor: "transparent",
-            border: "1px solid #ccc",
-            width: "910px",
-            height: "40px",
-            borderRadius: "8px",
-            paddingLeft: "10px",
-            paddingTop: "10px",
-            verticalAlign: "top",
-            resize: "none",
-          }}
           {...register("title", { required: true, maxLength: 35 })}
         />
         {errors.title?.type === "required" && (
           <span
-            className="inputErrorText"
-            style={{
-              color: "red",
-              fontSize: "12px",
-              marginTop: "5px",
-              marginLeft: "100px",
-              display: "block",
-            }}
+            className= {`${st.titleError} inputErrorText`}
           >
             This field is required
           </span>
         )}
         {errors.title?.type === "maxLength" && (
           <span
-            className="inputErrorText"
-            style={{
-              color: "red",
-              fontSize: "12px",
-              marginTop: "5px",
-              marginLeft: "75px",
-              display: "block",
-            }}
+            className={`${st.titleError2} inputErrorText`}
           >
             Title cannot contain more than 35 characters
           </span>
         )}
+
         <br />
         <br />
         <br />
+
         Content: &nbsp; &nbsp; &nbsp; &nbsp;
         <textarea
-          className={errors.content && "inputError"}
+          className={`${st.content} ${errors.content ? "inputError" : ""}`}
           placeholder="Here is a simple recipe to make a delicious meat lovers pizza: ..."
-          style={{
-            color: "black",
-            backgroundColor: "transparent",
-            border: "1px solid #ccc",
-            width: "910px",
-            height: "560px",
-            borderRadius: "8px",
-            paddingLeft: "10px",
-            paddingTop: "10px",
-            verticalAlign: "top",
-            resize: "none",
-          }}
           {...register("content", { required: true })}
         />
         {errors.content?.type === "required" && (
           <span
-            className="inputErrorText"
-            style={{
-              color: "red",
-              fontSize: "12px",
-              marginTop: "5px",
-              marginLeft: "100px",
-              display: "block",
-            }}
+            className={`${st.contentError} inputErrorText`}
           >
             This field is required
           </span>
         )}
+
         <br />
         <br />
+
         <div
-          style={{
-            gap: "15px",
-            paddingRight: "630px",
-            display: "flex",
-            justifyContent: "flex-end",
-          }}
+          className={st.buttonGap}
         >
           <button
+            className={st.cancelButton}
             type="button"
             onClick={cancelButton}
-            style={{
-              color: "black",
-              backgroundColor: "#EEEEEE",
-              width: "85px",
-              height: "40px",
-              borderRadius: "8px",
-              fontSize: "16px",
-            }}
           >
             Cancel
           </button>
 
           <button
+            className={st.submitButton}
             type="submit"
-            style={{
-              color: "white",
-              backgroundColor: "black",
-              width: "85px",
-              height: "40px",
-              borderRadius: "8px",
-              fontSize: "16px",
-            }}
           >
             Post
           </button>
