@@ -11,9 +11,17 @@ export default function PostPage({ post, notFound }) {
     );
   }
 
+  const image = post?.imageUrl || post?.photo; 
+
   return (
     <div style={{ maxWidth: 820, margin: "72px auto", padding: "0 16px" }}>
-      <Link href="/">← Back</Link>
+      <div style={{ marginBottom: 8 }}>
+        {post?.authorId ? (
+          <Link href={`/users/${post.authorId}`}>← {post.authorName ?? "Author"}</Link>
+        ) : (
+          <Link href="/">← Back</Link>
+        )}
+      </div>
 
       <h1 style={{ margin: "16px 0 8px" }}>{post.title}</h1>
 
@@ -23,9 +31,9 @@ export default function PostPage({ post, notFound }) {
         </p>
       )}
 
-      {post.photo && (
+      {image && (
         <img
-          src={post.photo}
+          src={image}
           alt=""
           style={{ maxWidth: "100%", borderRadius: 8, margin: "12px 0" }}
         />
@@ -43,6 +51,10 @@ export default function PostPage({ post, notFound }) {
       >
         {post.content}
       </article>
+
+      <div style={{ marginTop: 16 }}>
+        <Link href="/mainpage">Back to Home</Link>
+      </div>
     </div>
   );
 }
@@ -54,9 +66,7 @@ export async function getServerSideProps({ params, req }) {
 
   try {
     const res = await fetch(`${base}/api/posts/${params.postId}`);
-    if (!res.ok) {
-      return { props: { notFound: true } };
-    }
+    if (!res.ok) return { props: { notFound: true } };
     const post = await res.json();
     return { props: { post } };
   } catch (e) {
