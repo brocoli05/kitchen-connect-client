@@ -4,6 +4,17 @@ import { Row, Col } from "react-bootstrap";
 import { useState } from "react";
 import Feed from "@/components/Feed";
 import { useRouter } from "next/router";
+import PostDetail from "./posts/[postId]";
+import PostCard from "@/components/PostCard";
+
+// Sample post data
+const sample_post = {
+  _id: { $oid: "68d1f266f09b965d550486d6" },
+  title: "Homemade Pizza",
+  content: "How to make amazing pizza:",
+  photo: "/pizza.jpg",
+  authorId: "user123",
+};
 
 // ToggleList component for collapsible menu
 function ToggleList({ title }) {
@@ -124,13 +135,16 @@ export default function Home() {
             </Col>
           </Row>
           <Row className="m-5 d-flex justify-content-center">
-            <Feed kind="normal" />
+            {/* <Feed kind="normal" /> */}
+            <PostCard post={sample_post} />
           </Row>
         </Col>
         <Col md={3} className="mainpage-right p-3">
           <p className="left-right-title">Suggested</p>
           <Row className="feed-row d-flex justify-content-start">
-            <Feed kind="suggested" />
+            {/* <Feed kind="suggested" />
+             */}
+            <PostCard post={sample_post} />
           </Row>
           <Row>
             <p style={{ fontWeight: "bold", fontSize: "24px" }}>Contacts</p>

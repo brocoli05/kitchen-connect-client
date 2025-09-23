@@ -3,7 +3,6 @@ import { useRouter } from "next/router";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import { Dropdown } from "react-bootstrap";
-
 export default function TopNavBar({}) {
   const router = useRouter();
   return (
@@ -34,7 +33,7 @@ export default function TopNavBar({}) {
             Share
           </button>
           <a
-            href="/profile/edit"
+            href="/ProfileEditPage"
             className=" d-flex align-items-center h-100 justify-content-center btn btn-link"
           >
             <img
