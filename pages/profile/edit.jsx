@@ -10,21 +10,21 @@ export default function ProfileEditPage() {
     lastName: "",
     phone: "",
     email: "",
+    username: "",                 
   });
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/login");
-      return;
-    }
+    if (!token) { router.push("/login"); return; }
+
     api.get("/profile", { headers: { Authorization: `Bearer ${token}` } })
       .then(({ data }) => {
         setForm({
           firstName: data.firstName || "",
-          lastName: data.lastName || "",
-          phone: data.phone || "",
-          email: data.email || "",
+          lastName:  data.lastName  || "",
+          phone:     data.phone     || "",
+          email:     data.email     || "",
+          username:  data.username  || "",  
         });
       })
       .catch(() => {});
@@ -35,15 +35,21 @@ export default function ProfileEditPage() {
   const onSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
-    const { data } = await api.put("/profile", form, {
+    // username은 서버에서 관리(변경 X) → 보낼 때 제외해도 됨
+    const { username, ...payload } = form;
+
+    const { data } = await api.put("/profile", payload, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    setForm({
+
+    setForm(f => ({
+      ...f,
       firstName: data.firstName || "",
-      lastName: data.lastName || "",
-      phone: data.phone || "",
-      email: data.email || "",
-    });
+      lastName:  data.lastName  || "",
+      phone:     data.phone     || "",
+      email:     data.email     || "",
+      username:  data.username  || f.username, 
+    }));
     alert("Profile updated!");
   };
 
@@ -58,53 +64,30 @@ export default function ProfileEditPage() {
                 <div className={s.avatar}>IMG</div>
                 <div>
                   <div style={{ fontWeight: 600 }}>
-                    boba lover <span style={{ color: "#6b7280" }}>(nickname)</span>
+                    {form.username || "Unknown"} <span style={{ color:"#6b7280" }}>(nickname)</span>
                   </div>
-                  <div style={{ fontSize: 14, color: "#6b7280" }}>@blackmilktea</div>
+                  <div style={{ fontSize:14, color:"#6b7280" }}>
+                    @{form.username || "unknown"}          
+                  </div>
                 </div>
               </div>
 
               <form onSubmit={onSubmit} className={s.form} aria-label="Edit profile form">
                 <div>
                   <label className={s.label}>First name</label>
-                  <input
-                    className={s.input}
-                    name="firstName"
-                    value={form.firstName}
-                    onChange={onChange}
-                    placeholder="First name"
-                  />
+                  <input className={s.input} name="firstName" value={form.firstName} onChange={onChange} />
                 </div>
                 <div>
                   <label className={s.label}>Last name</label>
-                  <input
-                    className={s.input}
-                    name="lastName"
-                    value={form.lastName}
-                    onChange={onChange}
-                    placeholder="Last name"
-                  />
+                  <input className={s.input} name="lastName" value={form.lastName} onChange={onChange} />
                 </div>
                 <div>
                   <label className={s.label}>Phone</label>
-                  <input
-                    className={s.input}
-                    name="phone"
-                    value={form.phone}
-                    onChange={onChange}
-                    placeholder="+1 123-4567"
-                  />
+                  <input className={s.input} name="phone" value={form.phone} onChange={onChange} />
                 </div>
                 <div>
                   <label className={s.label}>Email</label>
-                  <input
-                    type="email"
-                    className={s.input}
-                    name="email"
-                    value={form.email}
-                    onChange={onChange}
-                    placeholder="name@example.com"
-                  />
+                  <input type="email" className={s.input} name="email" value={form.email} onChange={onChange} />
                 </div>
                 <button type="submit" className={s.button}>Update Information</button>
               </form>
