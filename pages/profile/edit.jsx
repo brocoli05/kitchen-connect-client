@@ -1,31 +1,66 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import s from "@/styles/profile-edit.module.css";
+import api from "@/utils/api";
 
 export default function ProfileEditPage() {
+  const router = useRouter();
   const [form, setForm] = useState({
-    firstName: "Evelyn",
-    lastName: "Kim",
-    phone: "+1 123-4567",
-    email: "etersh810@gmail.com",
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
   });
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+    api.get("/profile", { headers: { Authorization: `Bearer ${token}` } })
+      .then(({ data }) => {
+        setForm({
+          firstName: data.firstName || "",
+          lastName: data.lastName || "",
+          phone: data.phone || "",
+          email: data.email || "",
+        });
+      })
+      .catch(() => {});
+  }, [router]);
+
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-  const onSubmit = (e) => { e.preventDefault(); alert("UI only — API next sprint"); };
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem("token");
+    const { data } = await api.put("/profile", form, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setForm({
+      firstName: data.firstName || "",
+      lastName: data.lastName || "",
+      phone: data.phone || "",
+      email: data.email || "",
+    });
+    alert("Profile updated!");
+  };
 
   return (
     <div className={s.page}>
       <div className={s.wrap}>
         <section className={s.card}>
           <div className={s.cardHead}>Edit Information</div>
-
           <div className={s.cardBody}>
             <main>
               <div className={s.profile}>
                 <div className={s.avatar}>IMG</div>
                 <div>
-                  <div style={{fontWeight:600}}>
-                    boba lover <span style={{color:"#6b7280"}}>(nickname)</span>
+                  <div style={{ fontWeight: 600 }}>
+                    boba lover <span style={{ color: "#6b7280" }}>(nickname)</span>
                   </div>
-                  <div style={{fontSize:14, color:"#6b7280"}}>@blackmilktea</div>
+                  <div style={{ fontSize: 14, color: "#6b7280" }}>@blackmilktea</div>
                 </div>
               </div>
 
@@ -71,15 +106,11 @@ export default function ProfileEditPage() {
                     placeholder="name@example.com"
                   />
                 </div>
-
-                <button type="submit" className={s.button}>
-                  Update Information
-                </button>
+                <button type="submit" className={s.button}>Update Information</button>
               </form>
             </main>
           </div>
         </section>
-
         <button className={s.postBtn}>Post</button>
       </div>
     </div>
