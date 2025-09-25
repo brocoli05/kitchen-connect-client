@@ -18,6 +18,7 @@ const geistMono = Geist_Mono({
 export default function Home() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingAuth, setLoadingAuth] = useState(true);
 
   useEffect(() => {
     // Check for a user token or login status in local storage.
@@ -33,6 +34,7 @@ export default function Home() {
       // Redirect to the login page.
       router.replace("/login");
     }
+    setLoadingAuth(false);
   }, [router]);
 
   return (

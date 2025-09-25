@@ -107,7 +107,7 @@ export default function Home() {
           <Row className="d-flex justify-content-center">
             <button
               className="post-button "
-              onClick={() => router.push("/createPost")}
+              onClick={() => router.push("/posts/create")}
             >
               Post
             </button>
