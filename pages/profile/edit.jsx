@@ -17,7 +17,7 @@ export default function ProfileEditPage() {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
 
-    api.get("/profile", { headers: { Authorization: `Bearer ${token}` } })
+  api.get("/profile", { headers: { Authorization: `Bearer ${token}` } })
       .then(({ data }) => {
         setForm({
           firstName: data.firstName || "",
@@ -26,8 +26,12 @@ export default function ProfileEditPage() {
           email:     data.email     || "",
           username:  data.username  || "",  
         });
-      })
-      .catch(() => {});
+    })
+     .catch((err) => {
+       if (err?.response?.status === 401) {
+      router.push("/login");
+      }
+     });
   }, [router]);
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
