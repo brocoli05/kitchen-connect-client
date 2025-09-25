@@ -28,7 +28,6 @@ export default function UserPage({ user, posts, notFound }) {
         </div>
       </div>
 
-      {/* Posts list */}
       <h2 style={{ margin: "24px 0 12px" }}>Posts</h2>
       {posts?.length ? (
         <div style={{ display: "grid", gap: 12 }}>
@@ -51,19 +50,17 @@ export default function UserPage({ user, posts, notFound }) {
   );
 }
 
-// Call API server
+
 export async function getServerSideProps({ params, req }) {
-  const base =
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    `http://${req?.headers?.host || "localhost:3000"}`;
+  const base = `http://${req?.headers?.host || "localhost:3000"}`;
 
   try {
-    // 1) User Information
+    // User Information
     const uRes = await fetch(`${base}/api/users/${params.userId}`);
     if (!uRes.ok) return { props: { notFound: true } };
     const user = await uRes.json();
 
-    // 2) The list of the user
+    
     let posts = [];
     try {
       const pRes = await fetch(`${base}/api/users/${params.userId}/posts`);
@@ -72,12 +69,11 @@ export async function getServerSideProps({ params, req }) {
         posts = data.items ?? [];
       }
     } catch {
-      
       posts = [];
     }
 
     return { props: { user, posts } };
-  } catch (e) {
+  } catch {
     return { props: { notFound: true } };
   }
 }
