@@ -10,8 +10,11 @@
   },
   "dependencies": {
     "axios": "^1.12.2",
+    "bcryptjs": "^3.0.2",
     "bootstrap": "^5.3.8",
+    "jsonwebtoken": "^9.0.2",
     "mini-css-extract-plugin": "^2.9.4",
+    "mongodb": "^6.20.0",
     "next": "^15.5.3",
     "react": "^19.1.0",
     "react-bootstrap": "^2.10.10",

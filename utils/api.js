@@ -1,10 +1,9 @@
+// utils/api.js
+
 import axios from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
-  ? `${process.env.NEXT_PUBLIC_API_URL}/api`
-  : "http://localhost:5050/api";
-
-console.log("This is test-API_BASE_URL:", API_BASE_URL);
+// Use a relative path to point to the Next.js API routes on the same server.
+const API_BASE_URL = "/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,

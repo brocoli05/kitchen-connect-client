@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Link from "next/link";
 
 const AuthForm = ({ type, onSubmit, isLoading, error }) => {
   const [formData, setFormData] = useState({
@@ -83,12 +84,12 @@ const AuthForm = ({ type, onSubmit, isLoading, error }) => {
       </form>
       {type === "register" && (
         <p className="form-switch-text">
-          Already have an account? <a href="/login">Login</a>
+          Already have an account? <Link href="/login">Login</Link>
         </p>
       )}
       {type === "login" && (
         <p className="form-switch-text">
-          Don't have an account? <a href="/register">Register</a>
+          Don't have an account? <Link href="/register">Register</Link>
         </p>
       )}
     </div>
