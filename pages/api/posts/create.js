@@ -1,7 +1,7 @@
 // pages/api/posts/create.js
 
 import jwt from "jsonwebtoken";
-import { connectDB } from "../../../lib/mongodb";
+import clientPromise from "../../../lib/mongodb";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -30,6 +30,15 @@ export default async function handler(req, res) {
     await db.collection("posts").insertOne(newPost);
     res.status(201).json({ message: "Post created successfully" });
   } catch (error) {
+    if (
+      error.name === "JsonWebTokenError" ||
+      error.name === "TokenExpiredError"
+    ) {
+      return res
+        .status(401)
+        .json({ message: "Unauthorized: Invalid or expired token" });
+    }
+
     console.error("Create post error:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
