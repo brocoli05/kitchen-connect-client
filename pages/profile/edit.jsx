@@ -35,7 +35,6 @@ export default function ProfileEditPage() {
   const onSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
-    // username은 서버에서 관리(변경 X) → 보낼 때 제외해도 됨
     const { username, ...payload } = form;
 
     const { data } = await api.put("/profile", payload, {

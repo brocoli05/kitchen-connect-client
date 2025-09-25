@@ -33,7 +33,7 @@ export default function TopNavBar({}) {
             Share
           </button>
           <a
-            href="/ProfileEditPage"
+            href="/profile/edit"
             className=" d-flex align-items-center h-100 justify-content-center btn btn-link"
           >
             <img
