@@ -1,20 +1,13 @@
 import TopNavBar from "@/components/TopNavBar";
 import React from "react";
 import { Row, Col } from "react-bootstrap";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Feed from "@/components/Feed";
 import { useRouter } from "next/router";
 import PostDetail from "./posts/[postId]";
 import PostCard from "@/components/PostCard";
 
-// Sample post data
-const sample_post = {
-  _id: { $oid: "68d1f266f09b965d550486d6" },
-  title: "Homemade Pizza",
-  content: "How to make amazing pizza:",
-  photo: "/pizza.jpg",
-  authorId: "user123",
-};
+// We'll fetch real user posts instead of using sample data
 
 // ToggleList component for collapsible menu
 function ToggleList({ title }) {
@@ -95,6 +88,57 @@ const testUser = {
 };
 export default function Home() {
   const router = useRouter();
+  const [userPosts, setUserPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Fetch current user and their posts
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        // Get current user info
+        const userResponse = await fetch('/api/me');
+        if (userResponse.ok) {
+          const user = await userResponse.json();
+          console.log('User data:', user); // Debug log
+          setCurrentUser(user);
+          
+          // Fetch user's posts using their email
+          const postsResponse = await fetch(`/api/users/${user.id}/posts`);
+          if (postsResponse.ok) {
+            const posts = await postsResponse.json();
+            console.log('Posts data:', posts); // Debug log
+            
+            // Ensure posts is an array
+            if (Array.isArray(posts)) {
+              setUserPosts(posts);
+            } else {
+              console.error('Posts response is not an array:', posts);
+              setUserPosts([]); // Set empty array as fallback
+            }
+          } else {
+            console.error('Failed to fetch posts:', postsResponse.status);
+            setUserPosts([]);
+          }
+        } else {
+          console.error('Failed to fetch user:', userResponse.status);
+          setUserPosts([]);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        setUserPosts([]); // Ensure userPosts is always an array
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <>
       <TopNavBar />
@@ -107,7 +151,7 @@ export default function Home() {
           <Row className="d-flex justify-content-center">
             <button
               className="post-button "
-              onClick={() => router.push("/posts/create")}
+              onClick={() => router.push("/create")}
             >
               Post
             </button>
@@ -135,16 +179,27 @@ export default function Home() {
             </Col>
           </Row>
           <Row className="m-5 d-flex justify-content-center">
-            {/* <Feed kind="normal" /> */}
-            <PostCard post={sample_post} />
+            {/* Display user's own posts */}
+            {Array.isArray(userPosts) && userPosts.length > 0 ? (
+              userPosts.map((post) => (
+                <PostCard key={post._id || post.id} post={post} />
+              ))
+            ) : (
+              <div>No posts yet. Create your first post!</div>
+            )}
           </Row>
         </Col>
         <Col md={3} className="mainpage-right p-3">
           <p className="left-right-title">Suggested</p>
           <Row className="feed-row d-flex justify-content-start">
-            {/* <Feed kind="suggested" />
-             */}
-            <PostCard post={sample_post} />
+            {/* Display suggested posts (could be other users' posts) */}
+            {Array.isArray(userPosts) && userPosts.length > 0 ? (
+              userPosts.slice(0, 2).map((post) => (
+                <PostCard key={`suggested-${post._id || post.id}`} post={post} />
+              ))
+            ) : (
+              <div>No suggested posts available</div>
+            )}
           </Row>
           <Row>
             <p style={{ fontWeight: "bold", fontSize: "24px" }}>Contacts</p>
