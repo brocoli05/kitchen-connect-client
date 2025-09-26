@@ -7,9 +7,6 @@ import { useRouter } from "next/router";
 import PostDetail from "./posts/[postId]";
 import PostCard from "@/components/PostCard";
 
-// We'll fetch real user posts instead of using sample data
-
-// ToggleList component for collapsible menu
 function ToggleList({ title }) {
   const [open, setOpen] = useState(true);
   return (
@@ -89,6 +86,7 @@ const testUser = {
 export default function Home() {
   const router = useRouter();
   const [userPosts, setUserPosts] = useState([]);
+  const [suggestedPosts, setSuggestedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
 
@@ -96,29 +94,55 @@ export default function Home() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        // Get current user info
-        const userResponse = await fetch('/api/me');
+        // Get the token from localStorage
+        const token = localStorage.getItem("userToken");
+        
+        if (!token) {
+          console.error("No token found, redirecting to login");
+          router.push("/login");
+          return;
+        }
+
+        // Get current user info with authorization header
+        const userResponse = await fetch('/api/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         if (userResponse.ok) {
           const user = await userResponse.json();
           console.log('User data:', user); // Debug log
           setCurrentUser(user);
           
-          // Fetch user's posts using their email
+          // Fetch user's posts using their ID
           const postsResponse = await fetch(`/api/users/${user.id}/posts`);
           if (postsResponse.ok) {
             const posts = await postsResponse.json();
-            console.log('Posts data:', posts); // Debug log
+            console.log('Posts data:', posts); 
             
-            // Ensure posts is an array
-            if (Array.isArray(posts)) {
+
+            if (posts.items && Array.isArray(posts.items)) {
+              setUserPosts(posts.items);
+            } else if (Array.isArray(posts)) {
               setUserPosts(posts);
             } else {
               console.error('Posts response is not an array:', posts);
-              setUserPosts([]); // Set empty array as fallback
+              setUserPosts([]); 
             }
           } else {
             console.error('Failed to fetch posts:', postsResponse.status);
             setUserPosts([]);
+          }
+
+          const suggestedResponse = await fetch(`/api/users/suggested/posts`);
+          if (suggestedResponse.ok) {
+            const suggestedData = await suggestedResponse.json();
+            if (suggestedData.items && Array.isArray(suggestedData.items)) {
+              setSuggestedPosts(suggestedData.items); // 
+            }
+          } else {
+            console.log('No suggested posts available');
+            setSuggestedPosts([]);
           }
         } else {
           console.error('Failed to fetch user:', userResponse.status);
@@ -126,7 +150,7 @@ export default function Home() {
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
-        setUserPosts([]); // Ensure userPosts is always an array
+        setUserPosts([]); 
       } finally {
         setLoading(false);
       }
@@ -151,7 +175,7 @@ export default function Home() {
           <Row className="d-flex justify-content-center">
             <button
               className="post-button "
-              onClick={() => router.push("/create")}
+              onClick={() => router.push("/posts/create")}
             >
               Post
             </button>
@@ -192,11 +216,9 @@ export default function Home() {
         <Col md={3} className="mainpage-right p-3">
           <p className="left-right-title">Suggested</p>
           <Row className="feed-row d-flex justify-content-start">
-            {/* Display suggested posts (could be other users' posts) */}
-            {Array.isArray(userPosts) && userPosts.length > 0 ? (
-              userPosts.slice(0, 2).map((post) => (
-                <PostCard key={`suggested-${post._id || post.id}`} post={post} />
-              ))
+            {/* Display one suggested post (random post from other users) */}
+            {Array.isArray(suggestedPosts) && suggestedPosts.length > 0 ? (
+              <PostCard key={`suggested-${suggestedPosts[0]._id || suggestedPosts[0].id}`} post={suggestedPosts[0]} />
             ) : (
               <div>No suggested posts available</div>
             )}

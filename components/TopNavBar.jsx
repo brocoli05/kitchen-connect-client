@@ -5,6 +5,28 @@ import Col from "react-bootstrap/Col";
 import { Dropdown } from "react-bootstrap";
 export default function TopNavBar({}) {
   const router = useRouter();
+
+  const handleLogout = async () => {
+  try {
+    const token = localStorage.getItem("userToken");
+    
+    await fetch('/api/users/logout', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    localStorage.removeItem("userToken");
+    
+    router.push("/login");
+  } catch (error) {
+    console.error("Logout error:", error);
+    // Still logout even if API fails
+    localStorage.removeItem("userToken");
+    router.push("/login");
+  }
+};
   return (
     <div>
       <Row className="m-3 d-flex align-items-center topnav">
@@ -60,6 +82,9 @@ export default function TopNavBar({}) {
             <Dropdown.Menu align="end">
               <Dropdown.Item onClick={() => router.push("/settings")}>
                 Settings…
+              </Dropdown.Item>
+              <Dropdown.Item onClick={handleLogout}>
+                Logout
               </Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
