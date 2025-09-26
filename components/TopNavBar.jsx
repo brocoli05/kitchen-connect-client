@@ -54,8 +54,8 @@ export default function TopNavBar({}) {
           >
             Share
           </button>
-          <a
-            href="/profile/edit"
+          <button
+            onClick={() => router.push("/profile/edit")}
             className=" d-flex align-items-center h-100 justify-content-center btn btn-link"
           >
             <img
@@ -63,7 +63,7 @@ export default function TopNavBar({}) {
               src={"/Avatar.png"}
               alt="User Avatar"
             />
-          </a>
+          </button>
           <Dropdown className="me-3 rounded-3 d-flex align-items-center justify-content-center">
             <Dropdown.Toggle
               variant="light"
