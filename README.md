@@ -1,5 +1,3 @@
-# Kitchen-Connection
-
 A recipe sharing and social platform built with **Next.js** and **MongoDB Atlas**.  
 
 ---
