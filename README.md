@@ -1,55 +1,42 @@
-# Kitchen-Connection
+# Kitchen-connection
 
-A recipe sharing and social platform built with **Next.js** and **MongoDB Atlas**.  
-
----
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
 
 ## Getting Started
 
-Install dependencies:
+First, run the development server:
+
 ```bash
-npm install
-Run the development server:
-
 npm run dev
-Open http://localhost:3000 in your browser.
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-Main Pages
-/login → User login
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-/register → User registration
+You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
 
-/mainpage → Main feed with recipes
+[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
 
-/posts/create → Create a new post
+The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
 
-/posts/[postId] → Post details
+This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-/users/[userId] → User profile
+## Learn More
 
-Tech Stack
-Frontend: Next.js (Pages Router)
+To learn more about Next.js, take a look at the following resources:
 
-Database: MongoDB Atlas
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
 
-Styling: CSS
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-Deployment
-The project can be deployed on Vercel.
-Add your MongoDB connection string in .env.local.
+## Deploy on Vercel
 
-Learn More
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-To learn more about the technologies used in this project:
-
-Next.js Documentation
- – features and API reference
-
-Learn Next.js
- – interactive tutorial
-
-MongoDB Documentation
- – database guides and references
-
-Vercel Deployment Docs
- – how to deploy Next.js apps
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
