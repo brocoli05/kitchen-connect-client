@@ -2,9 +2,7 @@ import TopNavBar from "@/components/TopNavBar";
 import React from "react";
 import { Row, Col } from "react-bootstrap";
 import { useState, useEffect } from "react";
-import Feed from "@/components/Feed";
 import { useRouter } from "next/router";
-import PostDetail from "./posts/[postId]";
 import PostCard from "@/components/PostCard";
 
 function ToggleList({ title }) {
