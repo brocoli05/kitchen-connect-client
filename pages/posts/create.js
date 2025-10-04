@@ -1,12 +1,14 @@
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import TopNavBar from "@/components/TopNavBar";
 import st from "@/styles/createPost.module.css";
 import api from "../../utils/api";
 
 export default function CreatePost() {
   const router = useRouter();
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
   // secure protection to make sure unauthenticated user can't come to the page
   useEffect(() => {
@@ -35,11 +37,35 @@ export default function CreatePost() {
 
     try {
       const clientToken = localStorage.getItem("userToken");
-      const create = await api.post(
-        "/posts/create",
-        { title, content },
-        { headers: { Authorization: `Bearer ${clientToken}` } }
-      );
+      
+      // If there's an image, use FormData to send both text and binary data
+      if (selectedImage) {
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('content', content);
+        formData.append('photo', selectedImage); // Send actual file, not base64
+        
+        const response = await fetch('/api/posts/create', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${clientToken}`
+            // Don't set Content-Type - let browser set it for FormData
+          },
+          body: formData
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to create post');
+        }
+      } else {
+        // No image - use regular JSON approach
+        const create = await api.post(
+          "/posts/create",
+          { title, content },
+          { headers: { Authorization: `Bearer ${clientToken}` } }
+        );
+      }
+      
       router.push("/mainpage");
     } catch (error) {
       console.error(
@@ -51,6 +77,39 @@ export default function CreatePost() {
 
   const cancelButton = () => {
     router.push("/mainpage");
+  };
+
+  // Handle image selection - adapted from your fragments approach
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size must be less than 5MB');
+        return;
+      }
+      
+      setSelectedImage(file); // Store the actual file object
+      
+      // Create preview using FileReader 
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file); // For preview only
+    }
+  };
+
+  // Remove selected image
+  const removeImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
   };
 
   return (
@@ -92,6 +151,52 @@ export default function CreatePost() {
           </span>
         )}
         <br />
+        <br />
+        
+        {/* Image Upload Section - Using your fragments approach */}
+        <div className={st.imageUploadSection}>
+          <label htmlFor="imageUpload">Add Photo (Optional):</label>
+          <input
+            type="file"
+            id="imageUpload"
+            accept="image/*"
+            onChange={handleImageChange}
+            style={{ margin: "10px 0", display: "block" }}
+          />
+          
+          {/* Image Preview */}
+          {imagePreview && (
+            <div style={{ margin: "10px 0" }}>
+              <img 
+                src={imagePreview} 
+                alt="Preview" 
+                style={{ 
+                  maxWidth: "300px", 
+                  maxHeight: "200px", 
+                  objectFit: "cover",
+                  border: "1px solid #ddd",
+                  borderRadius: "4px"
+                }} 
+              />
+              <br />
+              <button 
+                type="button" 
+                onClick={removeImage}
+                style={{ 
+                  background: "#ff4444", 
+                  color: "white", 
+                  border: "none", 
+                  padding: "5px 10px", 
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  marginTop: "5px"
+                }}
+              >
+                Remove Image
+              </button>
+            </div>
+          )}
+        </div>
         <br />
         <div className={st.buttonGap}>
           <button
