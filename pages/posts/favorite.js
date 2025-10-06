@@ -38,7 +38,9 @@ export default function FavoritePosts(){
           <h1 style={{fontSize: "28px", fontWeight: "bold", textAlign: "center"}}>Your Favorite Recipes</h1>
 
           {posts.length === 0 ?(
-            <h2>No favorite recipes saved yet!</h2>
+            <div style={{textAlign: "center", paddingTop: "200px"}}>
+              <h3>No favorite recipes saved yet!</h3>
+            </div>
           ):(
             <div style={{
                 display: "grid",
