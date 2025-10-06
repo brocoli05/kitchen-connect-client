@@ -4,17 +4,6 @@ import { ObjectId } from "mongodb";
 import jwt from "jsonwebtoken";
 import fs from "fs";
 import path from "path";
-import formidable from "formidable";
-import { v4 as uuidv4 } from "uuid";
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
-const uploadDir = path.join(process.cwd(), "public", "uploads");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 export default async function handler(req, res) {
   const { postId } = req.query;
@@ -112,44 +101,7 @@ export default async function handler(req, res) {
         return res.status(403).json({ message: "Forbidden: not post owner" });
       }
 
-      // Support multipart/form-data (file upload) or JSON
-      let title;
-      let content;
-      let photo;
-
-      const contentType = (req.headers["content-type"] || "").toLowerCase();
-      if (contentType.includes("multipart/form-data")) {
-        // parse with formidable
-        const form = new formidable.IncomingForm({ multiples: false });
-        const parsed = await new Promise((resolve, reject) => {
-          form.parse(req, (err, fields, files) => {
-            if (err) return reject(err);
-            resolve({ fields, files });
-          });
-        });
-
-        title = parsed.fields.title;
-        content = parsed.fields.content;
-        photo = parsed.fields.photo || undefined;
-
-        if (parsed.files && parsed.files.photo) {
-          const file = parsed.files.photo;
-          const ext = path.extname(file.originalFilename || file.newFilename || file.name || "") || ".jpg";
-          const fileName = `${uuidv4()}${ext}`;
-          const dest = path.join(uploadDir, fileName);
-          try {
-            fs.renameSync(file.filepath, dest);
-            photo = `/uploads/${fileName}`;
-          } catch (e) {
-            console.error("Failed to move uploaded file", e);
-          }
-        }
-      } else {
-        // JSON body
-        title = req.body.title;
-        content = req.body.content;
-        photo = req.body.photo;
-      }
+      const { title, content, photo } = req.body;
 
       // Validate mandatory fields
       if (!title || typeof title !== "string" || title.trim() === "") {
@@ -165,19 +117,7 @@ export default async function handler(req, res) {
         updatedAt: new Date(),
       };
 
-      if (photo !== undefined) {
-        // If replacing an existing local photo, delete old file
-        if (post.photo && typeof post.photo === "string" && post.photo !== photo) {
-          try {
-            const possiblePath = post.photo.startsWith("/") ? post.photo.slice(1) : post.photo;
-            const filePath = path.join(process.cwd(), possiblePath);
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-          } catch (err) {
-            console.warn("Could not delete old photo file:", err);
-          }
-        }
-        updateFields.photo = photo;
-      }
+      if (photo !== undefined) updateFields.photo = photo;
 
       await db.collection("posts").updateOne({ _id: new ObjectId(postId) }, { $set: updateFields });
 

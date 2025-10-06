@@ -11,7 +11,6 @@ export default function PostPage({ post, notFound }) {
   const [isOwner, setIsOwner] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({ title: post.title || '', content: post.content || '', photo: post.photo || '' });
-  const [photoFile, setPhotoFile] = useState(null);
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
@@ -91,24 +90,11 @@ export default function PostPage({ post, notFound }) {
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('userToken') : null;
     try {
-      let resp;
-      if (photoFile) {
-        const formData = new FormData();
-        formData.append('title', form.title);
-        formData.append('content', form.content);
-        formData.append('photo', photoFile);
-        resp = await fetch(`/api/posts/${postId}`, {
-          method: 'PUT',
-          headers: { Authorization: `Bearer ${token}` },
-          body: formData,
-        });
-      } else {
-        resp = await fetch(`/api/posts/${postId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ title: form.title, content: form.content, photo: form.photo }),
-        });
-      }
+      const resp = await fetch(`/api/posts/${postId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ title: form.title, content: form.content, photo: form.photo }),
+      });
 
       const data = await resp.json();
       if (resp.ok) {
@@ -117,8 +103,6 @@ export default function PostPage({ post, notFound }) {
         post.content = data.content;
         post.photo = data.photo;
         setIsEditing(false);
-        setPhotoFile(null);
-        setForm((f)=> ({...f, photo: data.photo || ''}));
         alert('Post updated');
       } else {
         alert(data.message || 'Failed to update post');
@@ -184,10 +168,6 @@ export default function PostPage({ post, notFound }) {
                 <textarea name="content" value={form.content} onChange={onChange} rows={8} placeholder="Content" style={{ padding: 8 }} />
                 {errors.content && <div style={{ color: 'red' }}>{errors.content}</div>}
                 <input name="photo" value={form.photo} onChange={onChange} placeholder="Photo URL (optional)" style={{ padding: 8 }} />
-                <div>
-                  <label style={{ fontSize: 12, color: '#6b7280' }}>Or upload a new photo</label>
-                  <input type="file" accept="image/*" onChange={(e) => setPhotoFile(e.target.files[0] || null)} />
-                </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={saveEdit} style={{ background: '#10b981', color: '#fff', padding: '8px 12px', border: 'none', borderRadius: 6 }}>Save</button>
                   <button onClick={cancelEdit} style={{ background: '#6b7280', color: '#fff', padding: '8px 12px', border: 'none', borderRadius: 6 }}>Cancel</button>
