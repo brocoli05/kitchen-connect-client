@@ -43,7 +43,7 @@ function ToggleList({ title }) {
       {open && title === "Kitchen" && (
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
           <li>
-            <a href="#/action-1">Recipes</a>
+            <a href="/posts">Recipes</a>
           </li>
           <li>
             <a href="#/action-2">Recommended</a>
