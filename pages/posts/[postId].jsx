@@ -1,8 +1,12 @@
 // pages/posts/[postId].jsx
 import Link from "next/link";
+import { useRouter } from "next/router";
+import CommentSection from "@/components/CommentSection";
 
 export default function PostPage({ post, notFound }) {
-  if (notFound) {
+  const postId = post?.id;
+
+  if (notFound || !post) {
     return (
       <div style={{ padding: 24 }}>
         <p>Post not found.</p>
@@ -43,6 +47,14 @@ export default function PostPage({ post, notFound }) {
       >
         {post.content}
       </article>
+
+      {/* --- COMMENT section --- */}
+      <hr style={{ margin: "40px 0", borderTop: "1px solid #ddd" }} />
+
+      <section className="comments-section">
+        <h2 style={{ marginBottom: 20 }}>Comments</h2>
+        {postId && <CommentSection recipeId={postId} />}
+      </section>
     </div>
   );
 }
