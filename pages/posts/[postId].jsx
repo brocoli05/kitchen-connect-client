@@ -10,16 +10,9 @@ export default function PostPage({ post, notFound }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [isOwner, setIsOwner] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  // initialize empty and populate when `post` is available to avoid SSR undefined access
-  const [form, setForm] = useState({ title: '', content: '', photo: '' });
+  const [form, setForm] = useState({ title: post.title || '', content: post.content || '', photo: post.photo || '' });
   const [photoFile, setPhotoFile] = useState(null);
   const [errors, setErrors] = useState({});
-
-  useEffect(() => {
-    if (post) {
-      setForm({ title: post.title || '', content: post.content || '', photo: post.photo || '' });
-    }
-  }, [post]);
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
