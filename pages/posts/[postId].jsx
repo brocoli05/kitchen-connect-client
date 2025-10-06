@@ -2,9 +2,28 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import CommentSection from "@/components/CommentSection";
+import { useEffect, useState } from "react";
 
 export default function PostPage({ post, notFound }) {
   const postId = post?.id;
+  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isOwner, setIsOwner] = useState(false);
+
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
+    if (!token) return;
+
+    fetch(`/api/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        setCurrentUser(data);
+        if (data && post?.authorId && String(data.id) === String(post.authorId)) {
+          setIsOwner(true);
+        }
+      })
+      .catch(() => {});
+  }, [post]);
 
   if (notFound || !post) {
     return (
@@ -14,6 +33,30 @@ export default function PostPage({ post, notFound }) {
       </div>
     );
   }
+
+  const handleDelete = async () => {
+    const ok = window.confirm("Are you sure you want to delete this post? This action cannot be undone.");
+    if (!ok) return;
+
+    const token = typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
+    try {
+      const resp = await fetch(`/api/posts/${postId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (resp.ok) {
+        alert("Post deleted");
+        router.push("/");
+      } else {
+        const data = await resp.json();
+        alert(data.message || "Failed to delete post");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Failed to delete post. Please try again.");
+    }
+  };
 
   return (
     <div style={{ maxWidth: 820, margin: "72px auto", padding: "0 16px" }}>
@@ -47,6 +90,15 @@ export default function PostPage({ post, notFound }) {
       >
         {post.content}
       </article>
+
+      {/* Owner actions */}
+      {isOwner && (
+        <div style={{ marginTop: 12 }}>
+          <button onClick={handleDelete} style={{ background: '#e53e3e', color: '#fff', padding: '8px 12px', border: 'none', borderRadius: 6 }}>
+            Delete Post
+          </button>
+        </div>
+      )}
 
       {/* --- COMMENT section --- */}
       <hr style={{ margin: "40px 0", borderTop: "1px solid #ddd" }} />

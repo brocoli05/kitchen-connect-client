@@ -1,36 +1,86 @@
 // pages/api/posts/[postId].js
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
+import jwt from "jsonwebtoken";
+import fs from "fs";
+import path from "path";
 
 export default async function handler(req, res) {
-  if (req.method !== "GET") return res.status(405).end();
+  const { postId } = req.query;
+
+  if (!ObjectId.isValid(postId)) {
+    return res.status(400).json({ message: "Invalid postId" });
+  }
+
+  const client = await clientPromise;
+  const db = client.db(process.env.MONGODB_DB || "kitchen-connect");
 
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB); // "kitchen-connect"
-    const { postId } = req.query;
+    if (req.method === "GET") {
+      const post = await db
+        .collection("posts")
+        .findOne({ _id: new ObjectId(postId) });
 
-    if (!ObjectId.isValid(postId)) {
-      return res.status(400).json({ message: "Invalid postId" });
+      if (!post) return res.status(404).json({ message: "Post not found" });
+
+      const data = {
+        id: String(post._id),
+        title: post.title ?? "",
+        content: post.content ?? "",
+        photo: post.photo ?? null,
+        authorId: post.authorId ?? null,
+        createdAt: post.createdAt ?? null,
+      };
+
+      return res.status(200).json(data);
     }
 
-    const post = await db
-      .collection("posts")
-      .findOne({ _id: new ObjectId(postId) });
+    if (req.method === "DELETE") {
+      // Verify token
+      const token = req.headers.authorization?.split(" ")[1];
+      if (!token) return res.status(401).json({ message: "Unauthorized" });
 
-    if (!post) return res.status(404).json({ message: "Post not found" });
+      let decoded;
+      try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
+      } catch (err) {
+        return res.status(401).json({ message: "Invalid or expired token" });
+      }
 
-    const data = {
-      id: String(post._id),
-      title: post.title ?? "",
-      content: post.content ?? "",
-      photo: post.photo ?? null,
-      createdAt: post.createdAt ?? null,
-    };
+      const post = await db
+        .collection("posts")
+        .findOne({ _id: new ObjectId(postId) });
 
-    return res.status(200).json(data);
+      if (!post) return res.status(404).json({ message: "Post not found" });
+
+      // Only author can delete
+      if (!post.authorId || String(post.authorId) !== String(decoded.userId)) {
+        return res.status(403).json({ message: "Forbidden: not post owner" });
+      }
+
+      // If post has a local photo path, attempt to delete the file
+      if (post.photo && typeof post.photo === "string") {
+        try {
+          // Consider local uploads live under /public or /uploads - attempt to resolve
+          const possiblePath = post.photo.startsWith("/") ? post.photo.slice(1) : post.photo;
+          const filePath = path.join(process.cwd(), possiblePath);
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+        } catch (err) {
+          console.warn("Could not delete post photo file:", err);
+          // Continue deletion even if file removal fails
+        }
+      }
+
+      await db.collection("posts").deleteOne({ _id: new ObjectId(postId) });
+
+      return res.status(200).json({ message: "Post deleted" });
+    }
+
+    return res.status(405).json({ message: "Method not allowed" });
   } catch (e) {
-    console.error("[GET /api/posts/:postId]", e);
+    console.error("[POSTS /api/posts/:postId]", e);
     return res.status(500).json({ message: "Internal server error" });
   }
 }
