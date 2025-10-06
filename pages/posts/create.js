@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import TopNavBar from "@/components/TopNavBar";
 import st from "@/styles/createPost.module.css";
 import api from "../../utils/api";
+import { Row, Col } from "react-bootstrap";
 
 export default function CreatePost() {
   const router = useRouter();
   const [selectedImage, setSelectedImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
 
   // secure protection to make sure unauthenticated user can't come to the page
   useEffect(() => {
@@ -43,13 +43,12 @@ export default function CreatePost() {
         const formData = new FormData();
         formData.append('title', title);
         formData.append('content', content);
-        formData.append('photo', selectedImage); // Send actual file, not base64
+        formData.append('photo', selectedImage); // Send actual file
         
         const response = await fetch('/api/posts/create', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${clientToken}`
-            // Don't set Content-Type - let browser set it for FormData
           },
           body: formData
         });
@@ -79,7 +78,7 @@ export default function CreatePost() {
     router.push("/mainpage");
   };
 
-  // Handle image selection - adapted from your fragments approach
+  // Handle image selection - simplified without preview
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -96,20 +95,18 @@ export default function CreatePost() {
       }
       
       setSelectedImage(file); // Store the actual file object
-      
-      // Create preview using FileReader 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file); // For preview only
     }
   };
 
   // Remove selected image
   const removeImage = () => {
     setSelectedImage(null);
-    setImagePreview(null);
+    
+    // Clear the file input value so the same file can be selected again
+    const fileInput = document.getElementById('imageUpload');
+    if (fileInput) {
+      fileInput.value = '';
+    }
   };
 
   return (
@@ -136,67 +133,66 @@ export default function CreatePost() {
             Title cannot contain more than 35 characters
           </span>
         )}
-        <br />
-        <br />
+        
+        {/* Image Upload Section*/}
+        <Row className={st.imageUploadSection}>
+          <Col md={3}>
+            <label htmlFor="imageUpload">Add Photo (Optional):</label>
+          </Col>
+          <Col md={9}>
+            <input
+              type="file"
+              id="imageUpload"
+              accept="image/*"
+              onChange={handleImageChange}
+              style={{ margin: "10px 0", display: "block" }}
+            />
+            {/* Show selected file name and remove button */}
+            {selectedImage && (
+              <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ 
+                  color: '#28a745', 
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}>
+                  ✓ {selectedImage.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  style={{
+                    background: '#dc3545',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '4px 8px',
+                    fontSize: '12px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+          </Col>
+        </Row>
+        
         <br />
         Content: &nbsp; &nbsp; &nbsp; &nbsp;
         <textarea
           className={`${st.content} ${errors.content ? "inputError" : ""}`}
           placeholder="Here is a simple recipe to make a delicious meat lovers pizza: ..."
           {...register("content", { required: true })}
+          rows={6}
+          style={{ resize: 'vertical', minHeight: '120px', maxHeight: '300px' }}
         />
         {errors.content?.type === "required" && (
           <span className={`${st.contentError} inputErrorText`}>
             This field is required
           </span>
         )}
-        <br />
-        <br />
         
-        {/* Image Upload Section - Using your fragments approach */}
-        <div className={st.imageUploadSection}>
-          <label htmlFor="imageUpload">Add Photo (Optional):</label>
-          <input
-            type="file"
-            id="imageUpload"
-            accept="image/*"
-            onChange={handleImageChange}
-            style={{ margin: "10px 0", display: "block" }}
-          />
-          
-          {/* Image Preview */}
-          {imagePreview && (
-            <div style={{ margin: "10px 0" }}>
-              <img 
-                src={imagePreview} 
-                alt="Preview" 
-                style={{ 
-                  maxWidth: "300px", 
-                  maxHeight: "200px", 
-                  objectFit: "cover",
-                  border: "1px solid #ddd",
-                  borderRadius: "4px"
-                }} 
-              />
-              <br />
-              <button 
-                type="button" 
-                onClick={removeImage}
-                style={{ 
-                  background: "#ff4444", 
-                  color: "white", 
-                  border: "none", 
-                  padding: "5px 10px", 
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                  marginTop: "5px"
-                }}
-              >
-                Remove Image
-              </button>
-            </div>
-          )}
-        </div>
+        <br />
         <br />
         <div className={st.buttonGap}>
           <button
