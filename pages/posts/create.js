@@ -31,21 +31,35 @@ export default function CreatePost() {
 
   // When the post button is clicked
   const submitForm = async (data) => {
-    const { title, content } = data;
+    const { title, content, photo } = data;
 
     try {
       const clientToken = localStorage.getItem("userToken");
-      const create = await api.post(
-        "/posts/create",
-        { title, content },
-        { headers: { Authorization: `Bearer ${clientToken}` } }
-      );
-      router.push("/mainpage");
+
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("content", content);
+      // photo from register returns FileList; react-hook-form returns FileList
+      if (photo && photo.length > 0) {
+        formData.append("photo", photo[0]);
+      }
+
+      const res = await fetch("/api/posts/create", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${clientToken}`,
+        },
+        body: formData,
+      });
+
+      if (res.ok) {
+        router.push("/mainpage");
+      } else {
+        const err = await res.json();
+        console.error("Failed to post", err);
+      }
     } catch (error) {
-      console.error(
-        "Failed to post",
-        error.response ? error.response.data : error.message
-      );
+      console.error("Failed to post", error);
     }
   };
 
@@ -92,6 +106,11 @@ export default function CreatePost() {
           </span>
         )}
         <br />
+        <br />
+        <div style={{ marginTop: 12 }}>
+          <label>Photo (optional)</label>
+          <input type="file" accept="image/*" {...register("photo")} />
+        </div>
         <br />
         <div className={st.buttonGap}>
           <button
