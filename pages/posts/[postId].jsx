@@ -90,40 +90,13 @@ export default function PostPage({ post, notFound }) {
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('userToken') : null;
     try {
-      // If a file was selected, upload it first
-      let photoUrl = form.photo;
-      if (form.photoFile && form.photoFile.length > 0) {
-        const fd = new FormData();
-        fd.append('photo', form.photoFile[0]);
-        const uploadResp = await fetch('/api/uploads', { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : undefined, body: fd });
-        if (!uploadResp.ok) {
-          // try to read JSON error body, otherwise text
-          let errMsg = 'Upload failed';
-          try {
-            const errJson = await uploadResp.json();
-            errMsg = errJson.message || JSON.stringify(errJson);
-          } catch (e) {
-            try { errMsg = await uploadResp.text(); } catch (_) {}
-          }
-          console.error('Upload failed', uploadResp.status, errMsg);
-          throw new Error(errMsg || 'Upload failed');
-        }
-        const uploadData = await uploadResp.json();
-        photoUrl = uploadData.url;
-      }
-
       const resp = await fetch(`/api/posts/${postId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title: form.title, content: form.content, photo: photoUrl }),
+        body: JSON.stringify({ title: form.title, content: form.content, photo: form.photo }),
       });
 
-      let data = null;
-      try {
-        data = await resp.json();
-      } catch (e) {
-        console.error('Failed to parse response JSON', e);
-      }
+      const data = await resp.json();
       if (resp.ok) {
         // Update UI
         post.title = data.title;
@@ -132,13 +105,11 @@ export default function PostPage({ post, notFound }) {
         setIsEditing(false);
         alert('Post updated');
       } else {
-        const msg = (data && data.message) || `Update failed (${resp.status})`;
-        console.error('Update failed', resp.status, data);
-        alert(msg);
+        alert(data.message || 'Failed to update post');
       }
     } catch (e) {
-      console.error('Save edit error:', e);
-      alert(e.message || 'Failed to update post. Please try again.');
+      console.error(e);
+      alert('Failed to update post. Please try again.');
     }
   };
 
@@ -197,10 +168,6 @@ export default function PostPage({ post, notFound }) {
                 <textarea name="content" value={form.content} onChange={onChange} rows={8} placeholder="Content" style={{ padding: 8 }} />
                 {errors.content && <div style={{ color: 'red' }}>{errors.content}</div>}
                 <input name="photo" value={form.photo} onChange={onChange} placeholder="Photo URL (optional)" style={{ padding: 8 }} />
-                <div>
-                  <label htmlFor="photoFile">Or upload image:</label>
-                  <input id="photoFile" type="file" accept="image/*" onChange={(e) => setForm(f => ({ ...f, photoFile: e.target.files }))} />
-                </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={saveEdit} style={{ background: '#10b981', color: '#fff', padding: '8px 12px', border: 'none', borderRadius: 6 }}>Save</button>
                   <button onClick={cancelEdit} style={{ background: '#6b7280', color: '#fff', padding: '8px 12px', border: 'none', borderRadius: 6 }}>Cancel</button>

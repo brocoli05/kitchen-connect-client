@@ -31,41 +31,21 @@ export default function CreatePost() {
 
   // When the post button is clicked
   const submitForm = async (data) => {
-    const { title, content, photoFile } = data;
+    const { title, content } = data;
 
     try {
       const clientToken = localStorage.getItem("userToken");
-      // If a file was selected, upload it first to get a URL
-      let photoUrl = undefined;
-      if (photoFile && photoFile.length > 0) {
-        const fd = new FormData();
-        fd.append("photo", photoFile[0]);
-        const uploadResp = await fetch("/api/uploads", {
-          method: "POST",
-          headers: clientToken ? { Authorization: `Bearer ${clientToken}` } : undefined,
-          body: fd,
-        });
-        if (!uploadResp.ok) {
-          const err = await uploadResp.json().catch(() => ({}));
-          throw new Error(err.message || "Upload failed");
-        }
-        const uploadData = await uploadResp.json();
-        photoUrl = uploadData.url;
-      }
-
-      const payload = { title, content };
-      if (photoUrl) payload.photo = photoUrl;
-
       const create = await api.post(
         "/posts/create",
-        payload,
+        { title, content },
         { headers: { Authorization: `Bearer ${clientToken}` } }
       );
       router.push("/mainpage");
     } catch (error) {
-      console.error("Failed to post", error.response ? error.response.data : error.message);
-      const message = error.response && error.response.data ? (error.response.data.message || JSON.stringify(error.response.data)) : (error.message || 'Failed to post');
-      alert(message);
+      console.error(
+        "Failed to post",
+        error.response ? error.response.data : error.message
+      );
     }
   };
 
@@ -111,12 +91,6 @@ export default function CreatePost() {
             This field is required
           </span>
         )}
-        <br />
-        <br />
-        <div style={{ marginTop: 12 }}>
-          <label htmlFor="photoFile">Photo (optional): </label>
-          <input id="photoFile" type="file" accept="image/*" {...register("photoFile")} />
-        </div>
         <br />
         <br />
         <div className={st.buttonGap}>
