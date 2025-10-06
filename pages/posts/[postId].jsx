@@ -10,7 +10,7 @@ export default function PostPage({ post, notFound }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [isOwner, setIsOwner] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [form, setForm] = useState({ title: post.title || '', content: post.content || '', photo: post.photo || '' });
+  const [form, setForm] = useState({ title: post.title || '', content: post.content || '' });
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
@@ -62,7 +62,7 @@ export default function PostPage({ post, notFound }) {
   };
 
   const startEdit = () => {
-    setForm({ title: post.title || '', content: post.content || '', photo: post.photo || '' });
+    setForm({ title: post.title || '', content: post.content || '' });
     setErrors({});
     setIsEditing(true);
   };
@@ -93,7 +93,7 @@ export default function PostPage({ post, notFound }) {
       const resp = await fetch(`/api/posts/${postId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title: form.title, content: form.content, photo: form.photo }),
+        body: JSON.stringify({ title: form.title, content: form.content }),
       });
 
       const data = await resp.json();
@@ -101,7 +101,6 @@ export default function PostPage({ post, notFound }) {
         // Update UI
         post.title = data.title;
         post.content = data.content;
-        post.photo = data.photo;
         setIsEditing(false);
         alert('Post updated');
       } else {
@@ -167,7 +166,6 @@ export default function PostPage({ post, notFound }) {
                 {errors.title && <div style={{ color: 'red' }}>{errors.title}</div>}
                 <textarea name="content" value={form.content} onChange={onChange} rows={8} placeholder="Content" style={{ padding: 8 }} />
                 {errors.content && <div style={{ color: 'red' }}>{errors.content}</div>}
-                <input name="photo" value={form.photo} onChange={onChange} placeholder="Photo URL (optional)" style={{ padding: 8 }} />
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={saveEdit} style={{ background: '#10b981', color: '#fff', padding: '8px 12px', border: 'none', borderRadius: 6 }}>Save</button>
                   <button onClick={cancelEdit} style={{ background: '#6b7280', color: '#fff', padding: '8px 12px', border: 'none', borderRadius: 6 }}>Cancel</button>
