@@ -7,25 +7,24 @@ export default async function handler(req, res) {
 
   try {
     const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB); // "kitchen-connect"
+    const db = client.db(process.env.MONGODB_DB); // kitchen-connect
     const { postId } = req.query;
 
-    if (!ObjectId.isValid(postId)) {
-      return res.status(400).json({ message: "Invalid postId" });
-    }
+    // Build query that accepts either ObjectId or string id
+    const or = [{ id: postId }];
+    if (ObjectId.isValid(postId)) or.push({ _id: new ObjectId(postId) });
 
-    const post = await db
-      .collection("posts")
-      .findOne({ _id: new ObjectId(postId) });
+    const doc = await db.collection("posts").findOne({ $or: or });
+    if (!doc) return res.status(404).json({ message: "Post not found" });
 
-    if (!post) return res.status(404).json({ message: "Post not found" });
-
+    // Normalize id field for frontend convenience
     const data = {
-      id: String(post._id),
-      title: post.title ?? "",
-      content: post.content ?? "",
-      photo: post.photo ?? null,
-      createdAt: post.createdAt ?? null,
+      id: String(doc._id),
+      title: doc.title ?? "",
+      content: doc.content ?? "",
+      photo: doc.photo ?? "",
+      authorId: doc.authorId ?? doc.userId ?? null,
+      createdAt: doc.createdAt ?? null,
     };
 
     return res.status(200).json(data);

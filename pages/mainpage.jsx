@@ -6,6 +6,7 @@ import Feed from "@/components/Feed";
 import { useRouter } from "next/router";
 import PostDetail from "./posts/[postId]";
 import PostCard from "@/components/PostCard";
+import Link from "next/link";
 
 function ToggleList({ title }) {
   const [open, setOpen] = useState(true);
@@ -43,16 +44,16 @@ function ToggleList({ title }) {
       {open && title === "Kitchen" && (
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
           <li>
-            <a href="#/action-1">Recipes</a>
+            <a href="/recipes">Recipes</a>
           </li>
           <li>
             <a href="#/action-2">Recommended</a>
           </li>
           <li>
-            <a href="#/action-4">Trending</a>
+            <a href="#/action-3">Trending</a>
           </li>
           <li>
-            <a href="#/action-5">Resources</a>
+            <a href="#/action-4">Resources</a>
           </li>
         </ul>
       )}
