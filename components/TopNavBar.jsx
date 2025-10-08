@@ -40,6 +40,21 @@ export default function TopNavBar({}) {
           className="d-flex justify-content-end topnav-right d-flex align-items-center"
         >
           <button
+            onClick={() => router.push("/posts/favorite")}
+            className="me-3 rounded-3 d-flex align-items-center justify-content-center btn btn-link fw-bold"
+              style={{
+                textDecoration: "none",
+                color: "#FFFFFF",
+                backgroundColor: "#000000ff",
+                border: "none",
+                height: "35px",
+                width: "86px",
+              }}
+            type="button"
+            >
+              Favorites
+          </button>
+          <button
             onClick={() => router.push("/share")}
             className="me-3 rounded-3 d-flex align-items-center justify-content-center btn btn-link fw-bold"
             style={{

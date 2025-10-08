@@ -1,10 +1,9 @@
 // pages/posts/[postId].jsx
 import Link from "next/link";
-import { useRouter } from "next/router";
 import CommentSection from "@/components/CommentSection";
 import { useEffect, useState } from "react";
 
-export default function PostPage({ post, notFound }) {
+export default function PostPage({ post, notFound, postIdFromProps }) {
   const postId = post?.id;
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState(null);
@@ -111,6 +110,43 @@ export default function PostPage({ post, notFound }) {
       alert('Failed to update post. Please try again.');
     }
   };
+  useEffect(()=>{
+    const checkFavorite = async () => {
+      const token = localStorage.getItem("userToken");
+      if(!token){
+        return;
+      }
+
+      try{
+        const res = await api.get(`posts/${postIdFromProps}/isFavorite`,{
+          headers:{Authorization: `Bearer ${token}`}
+        });
+        setIsFavorited(res.data.isFavorited);
+      }
+      catch(error){
+        console.error("Failed to get favorite post ", error);
+      }
+    };
+    checkFavorite();
+  },[postIdFromProps]);
+
+  const handleSaveButton = async () => {
+    const token = localStorage.getItem("userToken");
+    if(!token){
+      return;
+    }
+    
+    try{
+      const res = await api.post(`posts/${postIdFromProps}/favorite`,
+        null,
+        {headers: {Authorization: `Bearer ${token}`}}
+      );
+      setIsFavorited(res.data.isFavorited);
+    }
+    catch(error){
+      console.log("Failed to handle save button ", error);
+    }
+  }
 
   return (
     <div style={{ maxWidth: 820, margin: "72px auto", padding: "0 16px" }}>
@@ -119,19 +155,28 @@ export default function PostPage({ post, notFound }) {
       <h1 style={{ margin: "16px 0 8px" }}>{post.title}</h1>
 
       {post.createdAt && (
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
         <p style={{ color: "#666", marginTop: 0 }}>
           {new Date(post.createdAt).toLocaleString()}
         </p>
+        <button
+            onClick={handleSaveButton}
+            style={{
+              padding: "8px 16px",
+              fontSize: 16,
+              border: "1px solid #333",
+              borderRadius: 4,
+              backgroundColor: isFavorited ? "#333" : "#fff",
+              color: isFavorited ? "#fff" : "#333",
+              cursor: "pointer",
+              fontWeight: isFavorited ? "bold" : "normal",
+            }}
+          >
+          {isFavorited ? "Saved" : "Save"}
+          </button>
+        </div>
       )}
-
-      {post.photo && (
-        <img
-          src={post.photo}
-          alt=""
-          style={{ maxWidth: "100%", borderRadius: 8, margin: "12px 0" }}
-        />
-      )}
-
+      
       <article
         style={{
           whiteSpace: "pre-wrap",
@@ -193,7 +238,7 @@ export async function getServerSideProps({ params, req }) {
     const r = await fetch(`${base}/api/posts/${params.postId}`);
     if (!r.ok) return { props: { notFound: true } };
     const post = await r.json();
-    return { props: { post } };
+    return { props: { post, postIdFromProps: params.postId} };
   } catch {
     return { props: { notFound: true } };
   }
