@@ -12,10 +12,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: "Invalid postId" });
   }
 
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB || "kitchen-connect");
-
   try {
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGODB_DB || "kitchen-connect");
+
     if (req.method === "GET") {
       const post = await db
         .collection("posts")
@@ -28,7 +28,7 @@ export default async function handler(req, res) {
         title: post.title ?? "",
         content: post.content ?? "",
         photo: post.photo ?? null,
-        authorId: post.authorId ?? null,
+        authorId: post.authorId ?? post.userId ?? null,
         createdAt: post.createdAt ?? null,
       };
 
@@ -61,7 +61,6 @@ export default async function handler(req, res) {
       // If post has a local photo path, attempt to delete the file
       if (post.photo && typeof post.photo === "string") {
         try {
-          // Consider local uploads live under /public or /uploads - attempt to resolve
           const possiblePath = post.photo.startsWith("/") ? post.photo.slice(1) : post.photo;
           const filePath = path.join(process.cwd(), possiblePath);
           if (fs.existsSync(filePath)) {
@@ -69,7 +68,6 @@ export default async function handler(req, res) {
           }
         } catch (err) {
           console.warn("Could not delete post photo file:", err);
-          // Continue deletion even if file removal fails
         }
       }
 
@@ -132,26 +130,6 @@ export default async function handler(req, res) {
         updatedAt: updatedPost.updatedAt || null,
       });
     }
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB); // kitchen-connect
-    const { postId } = req.query;
-
-    // Build query that accepts either ObjectId or string id
-    const or = [{ id: postId }];
-    if (ObjectId.isValid(postId)) or.push({ _id: new ObjectId(postId) });
-
-    const doc = await db.collection("posts").findOne({ $or: or });
-    if (!doc) return res.status(404).json({ message: "Post not found" });
-
-    // Normalize id field for frontend convenience
-    const data = {
-      id: String(doc._id),
-      title: doc.title ?? "",
-      content: doc.content ?? "",
-      photo: doc.photo ?? "",
-      authorId: doc.authorId ?? doc.userId ?? null,
-      createdAt: doc.createdAt ?? null,
-    };
 
     return res.status(405).json({ message: "Method not allowed" });
   } catch (e) {

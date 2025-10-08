@@ -2,6 +2,8 @@
 import Link from "next/link";
 import CommentSection from "@/components/CommentSection";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import api from "../../utils/api";
 
 export default function PostPage({ post, notFound, postIdFromProps }) {
   const postId = post?.id;
@@ -11,6 +13,7 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({ title: post.title || '', content: post.content || '' });
   const [errors, setErrors] = useState({});
+  const [isFavorited, setIsFavorited] = useState(false);
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
@@ -110,6 +113,7 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
       alert('Failed to update post. Please try again.');
     }
   };
+
   useEffect(()=>{
     const checkFavorite = async () => {
       const token = localStorage.getItem("userToken");
