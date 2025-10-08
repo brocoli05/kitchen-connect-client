@@ -7,35 +7,30 @@ export default async function handler(req, res) {
 
   try {
     const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB); // "kitchen-connect"
-
+    const db = client.db(process.env.MONGODB_DB);
     const { userId } = req.query;
 
-    const or = [{ authorId: userId }];
-    if (ObjectId.isValid(userId)) or.push({ authorId: new ObjectId(userId) });
+    const or = [{ id: userId }];
+    if (ObjectId.isValid(userId)) or.push({ _id: new ObjectId(userId) });
 
-    const posts = await db
+    const user = await db.collection("users").findOne({ $or: or }, { projection: { _id: 1 } });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const items = await db
       .collection("posts")
-      .find({ $or: or })
-      .sort({ createdAt: -1, _id: -1 })
-      .limit(50)
+      .find({ $or: [{ authorId: String(user._id) }, { userId: String(user._id) }] })
+      .sort({ createdAt: -1 })
       .toArray();
 
-    const items = posts.map((p) => ({
-      id: p.id ?? String(p._id),
-      title: p.title ?? "",
-      content: p.content ?? "",
-      excerpt:
-        p.excerpt ??
-        (p.content ? String(p.content).slice(0, 120) : ""),
-      authorId:
-        typeof p.authorId === "object" ? String(p.authorId) : p.authorId,
-      authorName: p.authorName ?? null,
-      imageUrl: p.imageUrl ?? null,
-      createdAt: p.createdAt ?? null,
+    const normalized = items.map((d) => ({
+      id: String(d._id),              
+      title: d.title ?? "",
+      content: d.content ?? "",
+      photo: d.photo ?? "",
+      createdAt: d.createdAt ?? null,
     }));
 
-    return res.status(200).json({ items });
+    return res.status(200).json({ items: normalized });
   } catch (e) {
     console.error("[GET /api/users/:userId/posts]", e);
     return res.status(500).json({ message: "Internal server error" });
