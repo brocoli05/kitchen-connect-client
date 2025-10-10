@@ -182,8 +182,8 @@ export default function Home() {
         </Col>
 
         <Col md={7} className="mainpage-center ">
-          <Row className="quick-post d-flex justify-content-center m-1">
-            {/* quick post */}
+          {/* <Row className="quick-post d-flex justify-content-center m-1">
+
             <Col
               md={10}
               className="d-flex align-items-center quick-post"
@@ -200,7 +200,7 @@ export default function Home() {
               <img src={"/mood.svg"} alt="mood" />
               <img src={"/photo.svg"} alt="photo" />
             </Col>
-          </Row>
+          </Row> */}
           <Row className="m-5 d-flex justify-content-center">
             {/* Display user's own posts */}
             {Array.isArray(userPosts) && userPosts.length > 0 ? (

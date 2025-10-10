@@ -4,6 +4,7 @@ import CommentSection from "@/components/CommentSection";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import api from "../../utils/api";
+import TopNavBar from "@/components/TopNavBar";
 
 export default function PostPage({ post, notFound, postIdFromProps }) {
   const postId = post?.id;
@@ -153,7 +154,10 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   }
 
   return (
+	<>
+	 <TopNavBar/>
     <div style={{ maxWidth: 820, margin: "72px auto", padding: "0 16px" }}>
+		
       <Link href="/">← Back</Link>
 
       <h1 style={{ margin: "16px 0 8px" }}>{post.title}</h1>
@@ -161,7 +165,15 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
       {post.createdAt && (
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
         <p style={{ color: "#666", marginTop: 0 }}>
-          {new Date(post.createdAt).toLocaleString()}
+          {new Date(post.createdAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+          })}
         </p>
         <button
             onClick={handleSaveButton}
@@ -233,6 +245,7 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
         {postId && <CommentSection recipeId={postId} />}
       </section>
     </div>
+	</>
   );
 }
 
