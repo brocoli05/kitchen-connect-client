@@ -1,4 +1,4 @@
-// pages/api/users/[userId]/posts.js
+
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import jwt from "jsonwebtoken";
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
 	return res.status(200).json({ message: "Successfully followed user" });
 
   } catch (e) {
-    console.error("[GET /api/users/:userId/posts]", e);
+      console.error("[POST /api/users/:userId/follow]", e);
     return res.status(500).json({ message: "Internal server error" });
   }
 }
