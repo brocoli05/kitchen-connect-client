@@ -95,7 +95,7 @@ export default function TopNavBar({}) {
               id="dropdown-settings"
             ></Dropdown.Toggle>
             <Dropdown.Menu align="end">
-              <Dropdown.Item onClick={() => router.push("/settings")}>
+              <Dropdown.Item onClick={() => router.push("/profile/edit")}>
                 Settings…
               </Dropdown.Item>
               <Dropdown.Item onClick={handleLogout}>

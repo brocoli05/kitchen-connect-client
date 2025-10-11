@@ -4,6 +4,14 @@ import { ObjectId } from "mongodb";
 import jwt from "jsonwebtoken";
 import fs from "fs";
 import path from "path";
+import formidable from 'formidable';
+
+// Disable body parsing for FormData when editing with images
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
 export default async function handler(req, res) {
   const { postId } = req.query;
@@ -12,10 +20,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: "Invalid postId" });
   }
 
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB || "kitchen-connect");
-
   try {
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGODB_DB || "kitchen-connect");
+
     if (req.method === "GET") {
       const post = await db
         .collection("posts")
@@ -28,7 +36,7 @@ export default async function handler(req, res) {
         title: post.title ?? "",
         content: post.content ?? "",
         photo: post.photo ?? null,
-        authorId: post.authorId ?? null,
+        authorId: post.authorId ?? post.userId ?? null,
         createdAt: post.createdAt ?? null,
       };
 
@@ -61,7 +69,6 @@ export default async function handler(req, res) {
       // If post has a local photo path, attempt to delete the file
       if (post.photo && typeof post.photo === "string") {
         try {
-          // Consider local uploads live under /public or /uploads - attempt to resolve
           const possiblePath = post.photo.startsWith("/") ? post.photo.slice(1) : post.photo;
           const filePath = path.join(process.cwd(), possiblePath);
           if (fs.existsSync(filePath)) {
@@ -69,7 +76,6 @@ export default async function handler(req, res) {
           }
         } catch (err) {
           console.warn("Could not delete post photo file:", err);
-          // Continue deletion even if file removal fails
         }
       }
 
@@ -101,7 +107,28 @@ export default async function handler(req, res) {
         return res.status(403).json({ message: "Forbidden: not post owner" });
       }
 
-      const { title, content, photo } = req.body;
+      let title, content, photoFile;
+
+      // Check if request has FormData (multipart) for image upload
+      if (req.headers['content-type']?.includes('multipart/form-data')) {
+        // Handle FormData with image upload
+        const form = formidable({
+          maxFileSize: 5 * 1024 * 1024, // 5MB limit
+          allowEmptyFiles: false,
+          filter: ({ mimetype }) => !mimetype || mimetype.includes('image'),
+        });
+
+        const [fields, files] = await form.parse(req);
+        
+        title = Array.isArray(fields.title) ? fields.title[0] : fields.title;
+        content = Array.isArray(fields.content) ? fields.content[0] : fields.content;
+        photoFile = Array.isArray(files.photo) ? files.photo[0] : files.photo;
+      } else {
+        // Handle regular JSON request
+        const { title: reqTitle, content: reqContent } = req.body;
+        title = reqTitle;
+        content = reqContent;
+      }
 
       // Validate mandatory fields
       if (!title || typeof title !== "string" || title.trim() === "") {
@@ -117,7 +144,45 @@ export default async function handler(req, res) {
         updatedAt: new Date(),
       };
 
-      if (photo !== undefined) updateFields.photo = photo;
+      // Handle photo upload if present
+      if (photoFile) {
+        try {
+          // Create uploads directory
+          const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+          if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+          }
+
+          // Generate unique filename
+          const fileExtension = path.extname(photoFile.originalFilename || '');
+          const uniqueFilename = `${Date.now()}-${Math.random().toString(36).substring(2)}${fileExtension}`;
+          const newPath = path.join(uploadsDir, uniqueFilename);
+
+          // Move file to uploads directory
+          fs.copyFileSync(photoFile.filepath, newPath);
+          
+          // Clean up temp file
+          fs.unlinkSync(photoFile.filepath);
+
+          // Store relative path in database
+          updateFields.photo = `/uploads/${uniqueFilename}`;
+
+          // Delete old photo if it exists
+          if (post.photo && typeof post.photo === "string") {
+            try {
+              const oldPhotoPath = path.join(process.cwd(), 'public', post.photo);
+              if (fs.existsSync(oldPhotoPath)) {
+                fs.unlinkSync(oldPhotoPath);
+              }
+            } catch (err) {
+              console.warn("Could not delete old photo file:", err);
+            }
+          }
+        } catch (error) {
+          console.error('Error handling photo upload:', error);
+          return res.status(500).json({ message: "Error uploading photo" });
+        }
+      }
 
       await db.collection("posts").updateOne({ _id: new ObjectId(postId) }, { $set: updateFields });
 
@@ -128,30 +193,11 @@ export default async function handler(req, res) {
         title: updatedPost.title,
         content: updatedPost.content,
         photo: updatedPost.photo || null,
+        photoUrl: updatedPost.photo || null, // Also return as photoUrl for frontend
         authorId: updatedPost.authorId,
         updatedAt: updatedPost.updatedAt || null,
       });
     }
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB); // kitchen-connect
-    const { postId } = req.query;
-
-    // Build query that accepts either ObjectId or string id
-    const or = [{ id: postId }];
-    if (ObjectId.isValid(postId)) or.push({ _id: new ObjectId(postId) });
-
-    const doc = await db.collection("posts").findOne({ $or: or });
-    if (!doc) return res.status(404).json({ message: "Post not found" });
-
-    // Normalize id field for frontend convenience
-    const data = {
-      id: String(doc._id),
-      title: doc.title ?? "",
-      content: doc.content ?? "",
-      photo: doc.photo ?? "",
-      authorId: doc.authorId ?? doc.userId ?? null,
-      createdAt: doc.createdAt ?? null,
-    };
 
     return res.status(405).json({ message: "Method not allowed" });
   } catch (e) {

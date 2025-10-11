@@ -2,7 +2,11 @@
 import Link from "next/link";
 import CommentSection from "@/components/CommentSection";
 import { useEffect, useState } from "react";
-
+import { useRouter } from "next/router";
+import api from "../../utils/api";
+import TopNavBar from "@/components/TopNavBar";
+import { Row, Col } from "react-bootstrap";
+import st from "@/styles/createPost.module.css";
 export default function PostPage({ post, notFound, postIdFromProps }) {
   const postId = post?.id;
   const router = useRouter();
@@ -11,7 +15,8 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({ title: post.title || '', content: post.content || '' });
   const [errors, setErrors] = useState({});
-
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
     if (!token) return;
@@ -74,7 +79,36 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
       alert("Failed to delete post. Please try again.");
     }
   };
+// Handle image selection - simplified without preview
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size must be less than 5MB');
+        return;
+      }
+      
+      setSelectedImage(file); // Store the actual file object
+    }
+  };
 
+  // Remove selected image
+  const removeImage = () => {
+    setSelectedImage(null);
+    
+    // Clear the file input value so the same file can be selected again
+    const fileInput = document.getElementById('imageUpload');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
   const startEdit = () => {
     setForm({ title: post.title || '', content: post.content || '' });
     setErrors({});
@@ -84,6 +118,7 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   const cancelEdit = () => {
     setIsEditing(false);
     setErrors({});
+    setSelectedImage(null); // Clear selected image when cancelling
   };
 
   const onChange = (e) => {
@@ -104,19 +139,43 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('userToken') : null;
     try {
-      const resp = await fetch(`/api/posts/${postId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title: form.title, content: form.content }),
-      });
+      let resp;
+      
+      if (selectedImage) {
+        // If there's an image, use FormData
+        const formData = new FormData();
+        formData.append('title', form.title);
+        formData.append('content', form.content);
+        formData.append('photo', selectedImage);
+        
+        resp = await fetch(`/api/posts/${postId}`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${token}` }, // Don't set Content-Type for FormData
+          body: formData,
+        });
+      } else {
+        // No image - use regular JSON approach
+        resp = await fetch(`/api/posts/${postId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ title: form.title, content: form.content }),
+        });
+      }
 
       const data = await resp.json();
       if (resp.ok) {
         // Update UI
         post.title = data.title;
         post.content = data.content;
+        if (data.photoUrl) {
+          post.photoUrl = data.photoUrl; // Update photo if new one was uploaded
+        }
         setIsEditing(false);
+        setSelectedImage(null); // Clear selected image
         alert('Post updated');
+        
+        // Refresh the page to show updated image
+        window.location.reload();
       } else {
         alert(data.message || 'Failed to update post');
       }
@@ -125,6 +184,7 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
       alert('Failed to update post. Please try again.');
     }
   };
+
   useEffect(()=>{
     const checkFavorite = async () => {
       const token = localStorage.getItem("userToken");
@@ -161,23 +221,28 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   };
 
   return (
+	<>
+	 <TopNavBar/>
     <div style={{ maxWidth: 820, margin: "72px auto", padding: "0 16px" }}>
+		
       <Link href="/">← Back</Link>
 
       <h1 style={{ margin: "16px 0 8px" }}>{post.title}</h1>
 
       {post.createdAt && (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginBottom: 12,
-          }}
-        >
-          <p style={{ color: "#666", marginTop: 0 }}>
-            {new Date(post.createdAt).toLocaleString()}
-          </p>
-          <button
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+        <p style={{ color: "#666", marginTop: 0 }}>
+          {new Date(post.createdAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+          })}
+        </p>
+        <button
             onClick={handleSaveButton}
             style={{
               padding: "8px 16px",
@@ -194,20 +259,30 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
           </button>
         </div>
       )}
-
-      <article
-        style={{
-          whiteSpace: "pre-wrap",
-          lineHeight: 1.6,
-          background: "#fafafa",
-          border: "1px solid #eee",
-          borderRadius: 8,
-          padding: 16,
-        }}
-      >
-        {post.content}
-      </article>
-
+      
+	<article
+	style={{
+		whiteSpace: "pre-wrap",
+		lineHeight: 1.6,
+		background: "#fafafa",
+		border: "1px solid #eee",
+		borderRadius: 8,
+		padding: 16,
+	}}
+	>
+	
+	{post.content}
+	</article>
+	<br/>
+	<div>
+		{post.photo && (
+			<img 
+				src={post.photo}
+				style={{ maxWidth: "100%", borderRadius: 8 }}
+			/>
+		)}
+	</div>
+	<br/>
       {/* Owner actions */}
       {isOwner && (
         <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
@@ -230,6 +305,49 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
                 <textarea name="content" value={form.content} onChange={onChange} rows={8} placeholder="Content" style={{ padding: 8 }} />
                 {errors.content && <div style={{ color: 'red' }}>{errors.content}</div>}
                 <div style={{ display: 'flex', gap: 8 }}>
+					        {/* Image Upload Section*/}
+				<Row className={st.imageUploadSection}>
+				<Col md={3}>
+					<label htmlFor="imageUpload">Add Photo (Optional):</label>
+				</Col>
+				<Col md={9}>
+					<input
+					type="file"
+					id="imageUpload"
+					accept="image/*"
+					onChange={handleImageChange}
+					style={{ margin: "10px 0", display: "block" }}
+					/>
+					{/* Show selected file name and remove button */}
+					{selectedImage && (
+					<div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+						<span style={{ 
+						color: '#28a745', 
+						fontSize: '14px',
+						fontWeight: '500'
+						}}>
+						✓ {selectedImage.name}
+						</span>
+						<button
+						type="button"
+						onClick={removeImage}
+						style={{
+							background: '#dc3545',
+							color: 'white',
+							border: 'none',
+							borderRadius: '4px',
+							padding: '4px 8px',
+							fontSize: '12px',
+							cursor: 'pointer'
+						}}
+						>
+						Remove
+						</button>
+					</div>
+					)}
+				</Col>
+				</Row>
+        
                   <button onClick={saveEdit} style={{ background: '#10b981', color: '#fff', padding: '8px 12px', border: 'none', borderRadius: 6 }}>Save</button>
                   <button onClick={cancelEdit} style={{ background: '#6b7280', color: '#fff', padding: '8px 12px', border: 'none', borderRadius: 6 }}>Cancel</button>
                 </div>
@@ -247,6 +365,7 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
         {postId && <CommentSection postId={postId} />}
       </section>
     </div>
+	</>
   );
 }
 
