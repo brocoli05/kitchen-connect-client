@@ -26,7 +26,8 @@ export default async function handler(req, res) {
     res.status(200).json({ 
       id: String(user._id),
       name: user.name || user.username || "User",
-      email: user.email 
+      email: user.email,
+      following: user.following || []
     });
   } catch (error) {
     if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {

@@ -45,7 +45,7 @@ export default function PostCard({ post }) {
       <p style={{margin:'0 0 8px 0', color:'#555'}}>{post.excerpt ?? post.content?.slice(0,100)}...</p>
       <div style={{display:'flex', gap:12, fontSize:14}}>
         <Link href={`/posts/${post.id || post._id?.$oid || post._id}`}>View</Link>
-        <Link href={`/users/${post.authorId}`}>Author</Link>
+        {post.authorId && <Link href={`/users/${post.authorId}`}>Author</Link>}
       </div>
     </div>
   );
