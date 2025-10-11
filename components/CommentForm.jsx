@@ -2,8 +2,9 @@
 "use client";
 
 import { useState } from "react";
+import styles from "../styles/CommentSection.module.css";
 
-export default function CommentForm({ recipeId, onCommentPosted }) {
+export default function CommentForm({ postId, onCommentCreated }) {
   const [text, setText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -34,7 +35,7 @@ export default function CommentForm({ recipeId, onCommentPosted }) {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          recipeId: recipeId,
+          postId: postId,
           text: text,
         }),
       });
@@ -44,7 +45,7 @@ export default function CommentForm({ recipeId, onCommentPosted }) {
       if (response.ok) {
         setText(""); // Clear the input field
         // Call the parent handler to update the comments list
-        onCommentPosted(responseData.newComment || {});
+        onCommentCreated(responseData.newComment || {});
       } else {
         setSubmitError(responseData.message || "Failed to post comment.");
       }
@@ -57,29 +58,22 @@ export default function CommentForm({ recipeId, onCommentPosted }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ marginBottom: "20px" }}>
+    <form onSubmit={handleSubmit} className={styles.commentForm}>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="Write your comment here..."
         rows="4"
         disabled={isSubmitting}
-        style={{ width: "100%", padding: "10px", boxSizing: "border-box" }}
+        className={styles.commentInput}
       />
 
-      {submitError && (
-        <p style={{ color: "red", margin: "5px 0" }}>{submitError}</p>
-      )}
+      {submitError && <p className={styles.errorMessage}>{submitError}</p>}
 
       <button
         type="submit"
         disabled={isSubmitting || !text.trim()}
-        className="post-button"
-        style={{
-          width: "auto",
-          padding: "0.5em 1em",
-          float: "right",
-        }}
+        className={styles.submitButton}
       >
         {isSubmitting ? "Posting..." : "Add Comment"}
       </button>

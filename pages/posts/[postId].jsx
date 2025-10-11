@@ -41,6 +41,21 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
     );
   }
 
+  useEffect(() => {
+    const token = localStorage.getItem("userToken");
+    if (!token) return;
+
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      if (userInfo) {
+        setCurrentUser(userInfo);
+      }
+    } catch (error) {
+      console.error("Failed to parse user info:", error);
+    }
+  }, []);
+
+  useEffect(() => {
   const handleDelete = async () => {
     const ok = window.confirm("Are you sure you want to delete this post? This action cannot be undone.");
     if (!ok) return;
@@ -173,40 +188,37 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   useEffect(()=>{
     const checkFavorite = async () => {
       const token = localStorage.getItem("userToken");
-      if(!token){
+      if (!token) {
         return;
       }
 
-      try{
-        const res = await api.get(`posts/${postIdFromProps}/isFavorite`,{
-          headers:{Authorization: `Bearer ${token}`}
+      try {
+        const res = await api.get(`posts/${postIdFromProps}/isFavorite`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
         setIsFavorited(res.data.isFavorited);
-      }
-      catch(error){
+      } catch (error) {
         console.error("Failed to get favorite post ", error);
       }
     };
     checkFavorite();
-  },[postIdFromProps]);
+  }, [postIdFromProps]);
 
   const handleSaveButton = async () => {
     const token = localStorage.getItem("userToken");
-    if(!token){
+    if (!token) {
       return;
     }
-    
-    try{
-      const res = await api.post(`posts/${postIdFromProps}/favorite`,
-        null,
-        {headers: {Authorization: `Bearer ${token}`}}
-      );
+
+    try {
+      const res = await api.post(`posts/${postIdFromProps}/favorite`, null, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setIsFavorited(res.data.isFavorited);
-    }
-    catch(error){
+    } catch (error) {
       console.log("Failed to handle save button ", error);
     }
-  }
+  };
 
   return (
 	<>
@@ -243,7 +255,7 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
               fontWeight: isFavorited ? "bold" : "normal",
             }}
           >
-          {isFavorited ? "Saved" : "Save"}
+            {isFavorited ? "Saved" : "Save"}
           </button>
         </div>
       )}
@@ -350,7 +362,7 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
 
       <section className="comments-section">
         <h2 style={{ marginBottom: 20 }}>Comments</h2>
-        {postId && <CommentSection recipeId={postId} />}
+        {postId && <CommentSection postId={postId} />}
       </section>
     </div>
 	</>
@@ -363,7 +375,7 @@ export async function getServerSideProps({ params, req }) {
     const r = await fetch(`${base}/api/posts/${params.postId}`);
     if (!r.ok) return { props: { notFound: true } };
     const post = await r.json();
-    return { props: { post, postIdFromProps: params.postId} };
+    return { props: { post, postIdFromProps: params.postId } };
   } catch {
     return { props: { notFound: true } };
   }
