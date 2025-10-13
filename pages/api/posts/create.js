@@ -25,6 +25,15 @@ export default async function handler(req, res) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
+    // Helper: promisify formidable.parse
+    const parseForm = (form, req) =>
+      new Promise((resolve, reject) => {
+        form.parse(req, (err, fields, files) => {
+          if (err) return reject(err);
+          resolve([fields, files]);
+        });
+      });
+
     // Check if request has FormData (multipart)
     if (req.headers['content-type']?.includes('multipart/form-data')) {
       // Handle FormData with image upload
@@ -34,8 +43,8 @@ export default async function handler(req, res) {
         filter: ({ mimetype }) => mimetype && mimetype.includes('image'),
       });
 
-      const [fields, files] = await form.parse(req);
-      
+      const [fields, files] = await parseForm(form, req);
+
       const title = Array.isArray(fields.title) ? fields.title[0] : fields.title;
       const content = Array.isArray(fields.content) ? fields.content[0] : fields.content;
       const photoFile = Array.isArray(files.photo) ? files.photo[0] : files.photo;
@@ -55,7 +64,7 @@ export default async function handler(req, res) {
         const imageBuffer = fs.readFileSync(photoFile.filepath);
         const base64Image = `data:${photoFile.mimetype};base64,${imageBuffer.toString('base64')}`;
         newPost.photo = base64Image;
-        
+
         // Clean up temp file
         fs.unlinkSync(photoFile.filepath);
       }
@@ -64,8 +73,23 @@ export default async function handler(req, res) {
       res.status(201).json({ message: "Post created successfully" });
       
     } else {
-      // Handle regular JSON request (no image)
-      const { title, content } = req.body;
+      // Handle regular JSON request (no image). Since bodyParser is disabled,
+      // read raw body and parse JSON manually.
+      const raw = await new Promise((resolve, reject) => {
+        let data = "";
+        req.on("data", (chunk) => (data += chunk));
+        req.on("end", () => resolve(data));
+        req.on("error", (err) => reject(err));
+      });
+
+      let parsed = {};
+      try {
+        parsed = raw ? JSON.parse(raw) : {};
+      } catch (err) {
+        return res.status(400).json({ message: "Invalid JSON body" });
+      }
+
+      const { title, content } = parsed;
 
       const client = await clientPromise;
       const db = client.db("kitchen-connect");
