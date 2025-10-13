@@ -15,10 +15,10 @@
     "jsonwebtoken": "^9.0.2",
     "mini-css-extract-plugin": "^2.9.4",
     "mongodb": "^6.20.0",
-    "next": "^15.5.3",
-    "react": "^19.1.0",
+    "next": "^15.5.4",
+    "react": "^19.2.0",
     "react-bootstrap": "^2.10.10",
-    "react-dom": "^19.1.0",
+    "react-dom": "^19.2.0",
     "react-hook-form": "^7.62.0",
     "react-router-dom": "^7.9.1"
   },
