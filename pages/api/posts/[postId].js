@@ -109,6 +109,15 @@ export default async function handler(req, res) {
 
       let title, content, photoFile;
 
+      // Helper: promisify formidable.parse (safer across versions)
+      const parseForm = (form, req) =>
+        new Promise((resolve, reject) => {
+          form.parse(req, (err, fields, files) => {
+            if (err) return reject(err);
+            resolve([fields, files]);
+          });
+        });
+
       // Check if request has FormData (multipart) for image upload
       if (req.headers['content-type']?.includes('multipart/form-data')) {
         // Handle FormData with image upload
@@ -118,14 +127,29 @@ export default async function handler(req, res) {
           filter: ({ mimetype }) => !mimetype || mimetype.includes('image'),
         });
 
-        const [fields, files] = await form.parse(req);
-        
+        const [fields, files] = await parseForm(form, req);
+
         title = Array.isArray(fields.title) ? fields.title[0] : fields.title;
         content = Array.isArray(fields.content) ? fields.content[0] : fields.content;
         photoFile = Array.isArray(files.photo) ? files.photo[0] : files.photo;
       } else {
-        // Handle regular JSON request
-        const { title: reqTitle, content: reqContent } = req.body;
+        // Handle regular JSON request: bodyParser is disabled for this route,
+        // so read the raw request body and parse JSON manually.
+        const raw = await new Promise((resolve, reject) => {
+          let data = "";
+          req.on("data", (chunk) => (data += chunk));
+          req.on("end", () => resolve(data));
+          req.on("error", (err) => reject(err));
+        });
+
+        let parsed = {};
+        try {
+          parsed = raw ? JSON.parse(raw) : {};
+        } catch (err) {
+          return res.status(400).json({ message: "Invalid JSON body" });
+        }
+
+        const { title: reqTitle, content: reqContent } = parsed;
         title = reqTitle;
         content = reqContent;
       }
