@@ -1,23 +1,43 @@
+// pages/recipes/index.jsx
 import { useEffect, useState, useMemo } from "react";
 import Head from "next/head";
-import { useRouter } from "next/router"; 
+import { useRouter } from "next/router";
+import Link from "next/link";
 import TopNavBar from "@/components/TopNavBar";
 import api from "@/utils/api";
 import s from "@/styles/recipes.module.css";
 
-/** Utility function to remove empty query parameters */
+/** Trim strings and drop empty/null/undefined values */
 function sanitize(obj) {
-  const clean = { ...obj };
-  Object.keys(clean).forEach((k) => {
-    if (clean[k] === "" || clean[k] == null) delete clean[k];
-  });
-  return clean;
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v == null) continue;
+    if (typeof v === "string") {
+      const t = v.trim();
+      if (t !== "") out[k] = t;
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
+/** Normalize id: supports string | ObjectId | {$oid: "..."} */
+function normalizeId(v) {
+  if (!v) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "object" && v.$oid) return v.$oid;
+  try {
+    return String(v);
+  } catch {
+    return "";
+  }
 }
 
 export default function RecipesPage() {
   const router = useRouter();
 
-  // --- State definitions ---
+  // --- Search/filter states ---
   const [q, setQ] = useState("");
   const [timeMax, setTimeMax] = useState("");
   const [difficulty, setDifficulty] = useState("");
@@ -27,10 +47,16 @@ export default function RecipesPage() {
   const [sort, setSort] = useState("relevance");
   const [page, setPage] = useState(1);
 
-  const [data, setData] = useState({ items: [], total: 0, totalPages: 1, page: 1 });
+  // --- Data states ---
+  const [data, setData] = useState({
+    items: [],
+    total: 0,
+    totalPages: 1,
+    page: 1,
+  });
   const [loading, setLoading] = useState(false);
 
-  // --- Memoized query parameters ---
+  // --- Memoized query params (cleaned) ---
   const params = useMemo(
     () =>
       sanitize({
@@ -47,7 +73,7 @@ export default function RecipesPage() {
     [q, timeMax, difficulty, dietary, include, exclude, sort, page]
   );
 
-  // --- Data fetching effect with debounce ---
+  // --- Fetch with debounce + cancellation + no-cache header ---
   useEffect(() => {
     let ignore = false;
     const controller = new AbortController();
@@ -55,8 +81,16 @@ export default function RecipesPage() {
     const timer = setTimeout(async () => {
       try {
         setLoading(true);
-        const res = await api.get("/posts", { params, signal: controller.signal }); 
-        if (!ignore) setData(res.data || { items: [], total: 0, totalPages: 1, page: 1 });
+        const res = await api.get("/posts", {
+          params,
+          signal: controller.signal,
+          headers: { "Cache-Control": "no-cache" }, // avoid browser cache
+        });
+        if (!ignore) {
+          const payload =
+            res?.data || { items: [], total: 0, totalPages: 1, page: 1 };
+          setData(payload);
+        }
       } catch (e) {
         // axios v1 cancellation
         if (e.name === "CanceledError" || e.code === "ERR_CANCELED") return;
@@ -65,7 +99,7 @@ export default function RecipesPage() {
       } finally {
         if (!ignore) setLoading(false);
       }
-    }, 250);
+    }, 300); // small debounce
 
     return () => {
       ignore = true;
@@ -86,7 +120,7 @@ export default function RecipesPage() {
     setPage(1);
   };
 
-  const items = data?.items || [];
+  const items = Array.isArray(data?.items) ? data.items : [];
 
   return (
     <>
@@ -120,6 +154,7 @@ export default function RecipesPage() {
                 setPage(1);
                 setQ(e.target.value);
               }}
+              autoComplete="off"
             />
 
             {/* Max Time */}
@@ -133,6 +168,7 @@ export default function RecipesPage() {
                 setPage(1);
                 setTimeMax(e.target.value);
               }}
+              inputMode="numeric"
             />
 
             {/* Difficulty */}
@@ -210,44 +246,70 @@ export default function RecipesPage() {
         {/* --- Loading / Empty states --- */}
         {loading && <div style={{ padding: "10px" }}>Loading...</div>}
         {!loading && items.length === 0 && (
-          <div style={{ padding: "10px", color: "#6b7280" }}>No recipes found.</div>
+          <div style={{ padding: "10px", color: "#6b7280" }}>
+            No recipes found.
+          </div>
         )}
 
         {/* --- Recipe Grid --- */}
         <div className={s.grid}>
-          {items.map((r) => (
-            <article key={r._id || r.id} className={s.card}>
-              <div className={s.cardHeader}>
-                <img
-                  src={r.photo || "/photo.svg"}
-                  alt="Recipe"
-                  className={s.thumb}
-                />
-                <div>
-                  <h2 className={s.cardTitle}>{r.title}</h2>
-                  <div className={s.meta}>
-                    {r.difficulty && <span className={s.badge}>{r.difficulty}</span>}
-                    {r.timeMax && <span className={s.badge}>{r.timeMax} min</span>}
-                    {r.dietary && <span className={s.badge}>{r.dietary}</span>}
+          {items.map((r) => {
+            const pid = normalizeId(r.id ?? r._id);
+            const uid = normalizeId(r.authorId ?? r.userId);
+
+            return (
+              <article key={pid || Math.random()} className={s.card}>
+                <div className={s.cardHeader}>
+                  <img
+                    src={r.photo || "/photo.svg"}
+                    alt={r.title ? `Recipe: ${r.title}` : "Recipe"}
+                    className={s.thumb}
+                  />
+                  <div>
+                    <h2 className={s.cardTitle}>{r.title || "(untitled)"}</h2>
+                    <div className={s.meta}>
+                      {r.difficulty && (
+                        <span className={s.badge}>{r.difficulty}</span>
+                      )}
+                      {r.timeMax && (
+                        <span className={s.badge}>{r.timeMax} min</span>
+                      )}
+                      {r.dietary && (
+                        <span className={s.badge}>{r.dietary}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <p className={s.desc}>
-                {(r.content || "").slice(0, 120)}
-                {r.content?.length > 120 ? "…" : ""}
-              </p>
+                <p className={s.desc}>
+                  {(r.content || "").slice(0, 120)}
+                  {r.content?.length > 120 ? "…" : ""}
+                </p>
 
-              <div className={s.cardActions}>
-                <a className={s.link} href={`/posts/${r._id || r.id}`}>
-                  View
-                </a>
-                <a className={s.link} href={`/users/${r.authorId || r.userId || ""}`}>
-                  Author
-                </a>
-              </div>
-            </article>
-          ))}
+                <div className={s.cardActions}>
+                  {pid ? (
+                    <Link className={s.link} href={`/posts/${encodeURIComponent(pid)}`}>
+                      View
+                    </Link>
+                  ) : (
+                    <button className={s.link} disabled title="No post id">
+                      View
+                    </button>
+                  )}
+
+                  {uid ? (
+                    <Link className={s.link} href={`/users/${encodeURIComponent(uid)}`}>
+                      Author
+                    </Link>
+                  ) : (
+                    <button className={s.link} disabled title="No author id">
+                      Author
+                    </button>
+                  )}
+                </div>
+              </article>
+            );
+          })}
         </div>
 
         {/* --- Pagination --- */}
@@ -260,7 +322,9 @@ export default function RecipesPage() {
             Prev
           </button>
 
-          <span>{data?.page || 1} / {data?.totalPages || 1}</span>
+          <span>
+            {data?.page || 1} / {data?.totalPages || 1}
+          </span>
 
           <button
             className={s.pagerBtn}
