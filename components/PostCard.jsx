@@ -1,44 +1,60 @@
+// components/PostCard.jsx
 import Link from "next/link";
 import { useRouter } from "next/router";
+
+function normalizeId(v) {
+  // Accept: string | ObjectId | {$oid: "..."}
+  if (!v) return "";
+  if (typeof v === "string") return v;
+  if (v.$oid) return v.$oid;
+  if (v.toString) return v.toString();
+  try { return String(v); } catch { return ""; }
+}
 
 export default function PostCard({ post }) {
   const router = useRouter();
 
+  // Normalize post id
+  const postId = normalizeId(post?.id ?? post?._id);
+
+  // Try multiple author fields then normalize
+  const rawAuthor =
+    post?.authorId ??
+    post?.userId ??
+    post?.author?.id ??
+    post?.author ??
+    null;
+  const authorId = normalizeId(rawAuthor);
+
   const handleCardClick = (e) => {
-    // Check if the clicked element is a link to prevent double navigation
-    if (e.target.tagName === 'A' || e.target.closest('a')) {
-      return;
-    }
-    // Navigate to post details using the post ID
-    const postId = post.id || post._id?.$oid || post._id;
-    router.push(`/posts/${postId}`);
+    // Avoid double navigation if clicking on a link
+    if (e.target.tagName === "A" || e.target.closest("a")) return;
+    if (postId) router.push(`/posts/${encodeURIComponent(postId)}`);
   };
 
   return (
-    <div 
+    <div
       onClick={handleCardClick}
       style={{
-        border:'1px solid #ddd', 
-        borderRadius:8, 
-        padding:12, 
-        marginBottom:12,
-        cursor: 'pointer',
-        transition: 'background-color 0.2s ease',
+        border: "1px solid #ddd",
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 12,
+        cursor: postId ? "pointer" : "default",
       }}
-      onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
     >
-      <h3 style={{margin:'0 0 8px 0'}}>{post.title}</h3>
+      <h3 style={{ margin: "0 0 8px 0" }}>{post.title}</h3>
+
       {post.photo && (
-        <img 
-          src={post.photo} 
-          alt={post.title || "Post image"} 
+        <img
+          src={post.photo}
+          alt={post.title || "Post image"}
           style={{
-            width: '100%',
-            maxHeight: '200px',
-            objectFit: 'cover',
-            borderRadius: '6px',
-            marginBottom: '8px'
+            width: "100%",
+            maxHeight: 200,
+            objectFit: "cover",
+            borderRadius: 6,
+            marginBottom: 8,
           }}
         />
       )}

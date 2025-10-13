@@ -1,58 +1,93 @@
+// pages/api/posts/index.js
 import clientPromise from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
+
+/** Build a safe case-insensitive regex */
+function rx(s) {
+  return new RegExp(String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+}
+
+/** Sanitize numeric query params */
+function toInt(v, fallback) {
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
 
 export default async function handler(req, res) {
-  if (req.method !== "GET") return res.status(405).json({ message: "Method not allowed" });
+  if (req.method !== "GET") return res.status(405).end();
+
+  // Avoid any caching during search/filtering
+  res.setHeader("Cache-Control", "no-store");
 
   try {
     const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB || "kitchen-connect");
+    const db = client.db(process.env.MONGODB_DB);
 
-    // Pagination
-    const page = Math.max(1, parseInt(req.query.page || "1", 10));
-    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit || "10", 10)));
+    const {
+      q = "",
+      timeMax = "",
+      difficulty = "",
+      dietary = "",
+      include = "",
+      exclude = "",
+      sort = "relevance",
+    } = req.query;
+
+    const page = toInt(req.query.page, 1);
+    const limit = toInt(req.query.limit, 12);
     const skip = (page - 1) * limit;
 
-    const total = await db.collection("posts").countDocuments({});
-    const posts = await db
-      .collection("posts")
-      .find({})
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .toArray();
+    // ---- Build MongoDB filter ----
+    const filter = {};
 
-    // Populate basic author info
-    const userIds = [...new Set(posts.map((p) => {
-      if (!p || !p.authorId) return null;
-      // If authorId is an ObjectId, convert to string
-      if (typeof p.authorId === 'object' && p.authorId._bsontype === 'ObjectID') return String(p.authorId);
-      return String(p.authorId);
-    }).filter(Boolean))];
+    // Keyword: match title or content (and optionally dietary if you store it)
+    if (q && String(q).trim() !== "") {
+      filter.$or = [
+        { title: { $regex: rx(q) } },
+        { content: { $regex: rx(q) } },
+        { dietary: { $regex: rx(q) } }, // safe even if field absent
+      ];
+    }
 
-    const users = userIds.length > 0
-      ? await db.collection("users").find({ _id: { $in: userIds.map(id => new ObjectId(id)) } }).toArray()
-      : [];
-    
-    const userMap = users.reduce((acc, user) => {
-      acc[String(user._id)] = { username: user.username || 'Unknown' };
-      return acc;
-    }, {});
+    // Optional filters (only apply when present)
+    if (difficulty) filter.difficulty = difficulty;
+    if (dietary) filter.dietary = { $regex: rx(dietary) };
+    if (timeMax) filter.timeMax = { $lte: toInt(timeMax, 0) };
 
-    // Normalize & return
-    const items = posts.map((p) => ({
-      id: String(p._id),
-      title: p.title || "",
-      content: p.content || "",
-      authorId: p.authorId ? String(p.authorId) : null,
-      author: p.authorId ? userMap[String(p.authorId)] || { username: 'Unknown' } : { username: 'Unknown' },
-      createdAt: p.createdAt || null,
-      photo: p.photo || null,
+    if (include) filter.includeIngredients = { $regex: rx(include) };
+    if (exclude) filter.excludeIngredients = { $not: { $regex: rx(exclude) } };
+
+    // ---- Sorting ----
+    const sortOption =
+      sort === "newest"
+        ? { createdAt: -1 }
+        : sort === "liked"
+        ? { likeCount: -1 }
+        : {}; // relevance fallback = keep insertion order or $text if you add index
+
+    // DEBUG: check the actual filter used
+    console.log("[/api/posts] filter:", JSON.stringify(filter));
+
+    const coll = db.collection("posts");
+
+    const [items, total] = await Promise.all([
+      coll.find(filter).sort(sortOption).skip(skip).limit(limit).toArray(),
+      coll.countDocuments(filter),
+    ]);
+
+    // normalize _id to id
+    const normalized = items.map((d) => ({
+      ...d,
+      id: String(d._id),
     }));
-    const pageCount = Math.ceil(total / limit) || 1;
-    return res.status(200).json({ items, total, page, pageCount, limit });
+
+    return res.status(200).json({
+      items: normalized,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      page,
+    });
   } catch (e) {
-    console.error("[GET /api/posts]", e);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("[/api/posts] error:", e);
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 }
