@@ -58,24 +58,10 @@ export default function PostCard({ post }) {
           }}
         />
       )}
-
-      <p style={{ margin: "0 0 8px 0", color: "#555" }}>
-        {(post.excerpt ?? post.content ?? "").toString().slice(0, 100)}
-        {((post.content ?? "").length > 100) ? "…" : ""}
-      </p>
-
-      <div style={{ display: "flex", gap: 12, fontSize: 14 }}>
-        {postId ? (
-          <Link href={`/posts/${encodeURIComponent(postId)}`}>View</Link>
-        ) : (
-          <button disabled>View</button>
-        )}
-
-        {authorId ? (
-          <Link href={`/users/${encodeURIComponent(authorId)}`}>Author</Link>
-        ) : (
-          <button disabled title="No author id on this post">Author</button>
-        )}
+      <p style={{margin:'0 0 8px 0', color:'#555'}}>{post.excerpt ?? post.content?.slice(0,100)}...</p>
+      <div style={{display:'flex', gap:12, fontSize:14}}>
+        <Link href={`/posts/${post.id || post._id?.$oid || post._id}`}>View</Link>
+        {post.authorId && <Link href={`/users/${post.authorId}`}>Author</Link>}
       </div>
     </div>
   );

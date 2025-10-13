@@ -1,4 +1,3 @@
-// pages/posts/index.jsx
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
@@ -23,7 +22,7 @@ export default function PostsListPage() {
       .then((r) => r.ok ? r.json() : Promise.reject(r))
       .then((data) => {
         setPosts(data.items || []);
-        setPageCount(data.totalPages || 1);
+        setPageCount(data.pageCount || 1);
       })
       .catch((e) => {
         console.error("Failed to load posts", e);
