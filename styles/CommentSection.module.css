@@ -1,0 +1,142 @@
+/* Base styles for the entire comment item */
+.commentItem {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+}
+
+/* Layout container for text and buttons */
+.commentContentContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+/* Style for the main comment text area */
+.commentTextArea {
+  flex-grow: 1;
+  margin-right: 20px;
+  min-width: 0;
+}
+
+/* Style for the comment text paragraph */
+.commentText {
+  font-size: 1.1rem;
+  margin: 0;
+  word-wrap: break-word;
+}
+
+/* Style for the text area when editing */
+.editInput {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  resize: none; /* Prevents manual resizing */
+  font-family: inherit; /* Maintains font consistency */
+}
+
+/* Style for the action buttons container */
+.commentActions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px; /* Adds space between buttons */
+}
+
+/* Primary Button (Save) - Overrides the feed-action-btn*/
+.btnPrimary {
+  /* Uses primary-color (black) */
+  background: var(--primary-color);
+  color: #fff;
+  padding: 6px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.btnPrimary:hover {
+  background-color: #111111;
+}
+
+/* Secondary Button styles will reuse the existing .feed-action-btn from main.css */
+
+/* Header for comment count */
+.commentCountHeader {
+  margin-top: 40px;
+  margin-bottom: 20px;
+  color: var(--primary-color);
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 10px;
+  font-size: 1.4rem;
+}
+
+/* Message for loading or no comments */
+.messageText {
+  color: var(--light-text-color);
+}
+
+.emptyMessageText {
+  color: var(--text-color);
+  font-style: italic;
+}
+
+/* Style for the form itself */
+.commentForm {
+  margin-bottom: 20px;
+}
+
+/* Style for the text area */
+.commentInput {
+  width: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  resize: vertical; /* Allow resizing only vertically, if needed */
+  font-family: inherit;
+  font-size: 1rem;
+  margin-bottom: 10px; /* Space above button/error message */
+}
+
+/* Primary Submit Button*/
+.submitButton {
+  /* Uses primary-color (black) */
+  background: var(--primary-color);
+  color: #fff;
+  padding: 0.5em 1em;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  transition: background-color 0.2s;
+  float: right; /* Pushes button to the right */
+}
+
+.submitButton:hover {
+  background-color: #111111;
+}
+
+.submitButton:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  color: #666;
+}
+
+/* Error Message Style */
+.errorMessage {
+  color: var(--error-color);
+  margin: 5px 0 15px 0;
+  font-weight: 500;
+  float: left; /* Keeps error message left of the button */
+}
+
+/* Clearfix for the container holding button and error */
+.formFooter::after {
+  content: "";
+  display: table;
+  clear: both;
+}

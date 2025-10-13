@@ -4,9 +4,10 @@ import { ObjectId } from "mongodb";
 
 // Helper: allow both ObjectId and string id
 function userMatch(userId) {
-  const or = [{ id: String(userId) }];
-  if (ObjectId.isValid(userId)) or.push({ _id: new ObjectId(userId) });
-  return { $or: or };
+  if (ObjectId.isValid(userId)) {
+    return { _id: new ObjectId(userId) };
+  }
+  return { _id: userId };
 }
 
 export default async function handler(req, res) {
@@ -34,6 +35,7 @@ export default async function handler(req, res) {
       bio: user.bio ?? "",
       avatarUrl: user.avatarUrl ?? "/avatar.png",
       createdAt: user.createdAt ?? null,
+      following: user.following ?? [],
     };
 
     return res.status(200).json(data);

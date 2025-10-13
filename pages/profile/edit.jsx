@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import s from "@/styles/profile-edit.module.css";
+import TopNavBar from "@/components/TopNavBar";
 
 export default function ProfileEditPage() {
   const router = useRouter();
@@ -151,6 +152,8 @@ export default function ProfileEditPage() {
   };
 
   return (
+	<>
+	<TopNavBar/>
     <div className={s.page}>
       <div className={s.wrap}>
         <section className={s.card}>
@@ -228,5 +231,6 @@ export default function ProfileEditPage() {
         <button className={s.postBtn}>Post</button>
       </div>
     </div>
+	</>
   );
 }

@@ -2,9 +2,7 @@ import TopNavBar from "@/components/TopNavBar";
 import React from "react";
 import { Row, Col } from "react-bootstrap";
 import { useState, useEffect } from "react";
-import Feed from "@/components/Feed";
 import { useRouter } from "next/router";
-import PostDetail from "./posts/[postId]";
 import PostCard from "@/components/PostCard";
 import Link from "next/link";
 
@@ -63,33 +61,32 @@ function ToggleList({ title }) {
 }
 function Contact({ user }) {
   return (
-    <Row>
+    <Row className="mb-3">
       <Col md={4}>
         <img
-          src={user.avatarUrl}
+          src={user.avatarUrl || '/avatar.png'}
           alt="Avatar"
           className="profile-contact-img"
         />
       </Col>
       <Col md={8}>
-        <p className="profile-contact-name">{user.userName}</p>
-        <p className="profile-contact-bio">{user.bio}</p>
+        <Link href={`/users/${user.id}`} style={{ textDecoration: 'none' }}>
+          <p className="profile-contact-name" style={{ cursor: 'pointer', color: '#007bff' }}>
+            {user.name || user.username}
+          </p>
+        </Link>
+        <p className="profile-contact-bio">{user.bio || 'No bio available'}</p>
       </Col>
     </Row>
   );
 }
-const testUser = {
-  id: 1,
-  userName: "Carlo Emilio",
-  avatarUrl: "/testContact.png",
-  bio: "Let's go",
-};
 export default function Home() {
   const router = useRouter();
   const [userPosts, setUserPosts] = useState([]);
   const [suggestedPosts, setSuggestedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
+  const [followingUsers, setFollowingUsers] = useState([]);
 
   // Fetch current user and their posts
   useEffect(() => {
@@ -114,6 +111,30 @@ export default function Home() {
           const user = await userResponse.json();
           console.log('User data:', user); // Debug log
           setCurrentUser(user);
+          
+          // Fetch detailed info about users the current user is following
+          if (user.following && user.following.length > 0) {
+            try {
+              const followingUsersData = await Promise.all(
+                user.following.map(async (userId) => {
+                  const response = await fetch(`/api/users/${userId}`);
+                  if (response.ok) {
+                    return await response.json();
+                  }
+                  return null;
+                })
+              );
+              // Filter out any null results and set the following users
+              const validFollowingUsers = followingUsersData.filter(user => user !== null);
+              setFollowingUsers(validFollowingUsers);
+              console.log('Following users:', validFollowingUsers);
+            } catch (error) {
+              console.error('Error fetching following users:', error);
+              setFollowingUsers([]);
+            }
+          } else {
+            setFollowingUsers([]);
+          }
           
           // Fetch user's posts using their ID
           const postsResponse = await fetch(`/api/users/${user.id}/posts`);
@@ -184,8 +205,8 @@ export default function Home() {
         </Col>
 
         <Col md={7} className="mainpage-center ">
-          <Row className="quick-post d-flex justify-content-center m-1">
-            {/* quick post */}
+          {/* <Row className="quick-post d-flex justify-content-center m-1">
+
             <Col
               md={10}
               className="d-flex align-items-center quick-post"
@@ -202,7 +223,7 @@ export default function Home() {
               <img src={"/mood.svg"} alt="mood" />
               <img src={"/photo.svg"} alt="photo" />
             </Col>
-          </Row>
+          </Row> */}
           <Row className="m-5 d-flex justify-content-center">
             {/* Display user's own posts */}
             {Array.isArray(userPosts) && userPosts.length > 0 ? (
@@ -225,8 +246,19 @@ export default function Home() {
             )}
           </Row>
           <Row>
-            <p style={{ fontWeight: "bold", fontSize: "24px" }}>Contacts</p>
-            <Contact user={testUser} />
+            <p style={{ fontWeight: "bold", fontSize: "24px" }}>Following</p>
+            {followingUsers.length > 0 ? (
+              followingUsers.map((user) => (
+                <Contact 
+                  key={user._id} 
+                  user={user} 
+                />
+              ))
+            ) : (
+              <div style={{ color: '#666', fontStyle: 'italic' }}>
+                You're not following anyone yet. Go explore and follow some users!
+              </div>
+            )}
           </Row>
         </Col>
       </Row>
