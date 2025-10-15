@@ -4,7 +4,7 @@ import { ObjectId } from "mongodb";
 import jwt from "jsonwebtoken";
 import fs from "fs";
 import path from "path";
-import formidable from 'formidable';
+import formidable from "formidable";
 
 // Disable body parsing for FormData when editing with images
 export const config = {
@@ -25,22 +25,17 @@ export default async function handler(req, res) {
     const db = client.db(process.env.MONGODB_DB || "kitchen-connect");
 
     if (req.method === "GET") {
-      const post = await db
-        .collection("posts")
-        .findOne({ _id: new ObjectId(postId) });
-
+      const post = await db.collection("posts").findOne({ _id: new ObjectId(postId) });
       if (!post) return res.status(404).json({ message: "Post not found" });
 
-      const data = {
+      return res.status(200).json({
         id: String(post._id),
         title: post.title ?? "",
         content: post.content ?? "",
         photo: post.photo ?? null,
         authorId: post.authorId ?? post.userId ?? null,
         createdAt: post.createdAt ?? null,
-      };
-
-      return res.status(200).json(data);
+      });
     }
 
     if (req.method === "DELETE") {
@@ -55,10 +50,7 @@ export default async function handler(req, res) {
         return res.status(401).json({ message: "Invalid or expired token" });
       }
 
-      const post = await db
-        .collection("posts")
-        .findOne({ _id: new ObjectId(postId) });
-
+      const post = await db.collection("posts").findOne({ _id: new ObjectId(postId) });
       if (!post) return res.status(404).json({ message: "Post not found" });
 
       // Only author can delete
@@ -80,7 +72,6 @@ export default async function handler(req, res) {
       }
 
       await db.collection("posts").deleteOne({ _id: new ObjectId(postId) });
-
       return res.status(200).json({ message: "Post deleted" });
     }
 
@@ -96,10 +87,7 @@ export default async function handler(req, res) {
         return res.status(401).json({ message: "Invalid or expired token" });
       }
 
-      const post = await db
-        .collection("posts")
-        .findOne({ _id: new ObjectId(postId) });
-
+      const post = await db.collection("posts").findOne({ _id: new ObjectId(postId) });
       if (!post) return res.status(404).json({ message: "Post not found" });
 
       // Only author can edit
@@ -109,7 +97,7 @@ export default async function handler(req, res) {
 
       let title, content, photoFile;
 
-      // Helper: promisify formidable.parse (safer across versions)
+      // Helper: promisify formidable.parse
       const parseForm = (form, req) =>
         new Promise((resolve, reject) => {
           form.parse(req, (err, fields, files) => {
@@ -118,23 +106,20 @@ export default async function handler(req, res) {
           });
         });
 
-      // Check if request has FormData (multipart) for image upload
-      if (req.headers['content-type']?.includes('multipart/form-data')) {
-        // Handle FormData with image upload
+      // Check if request has FormData (multipart)
+      if (req.headers["content-type"]?.includes("multipart/form-data")) {
         const form = formidable({
-          maxFileSize: 5 * 1024 * 1024, // 5MB limit
+          maxFileSize: 5 * 1024 * 1024,
           allowEmptyFiles: false,
-          filter: ({ mimetype }) => !mimetype || mimetype.includes('image'),
+          filter: ({ mimetype }) => !mimetype || mimetype.includes("image"),
         });
 
         const [fields, files] = await parseForm(form, req);
-
         title = Array.isArray(fields.title) ? fields.title[0] : fields.title;
         content = Array.isArray(fields.content) ? fields.content[0] : fields.content;
         photoFile = Array.isArray(files.photo) ? files.photo[0] : files.photo;
       } else {
-        // Handle regular JSON request: bodyParser is disabled for this route,
-        // so read the raw request body and parse JSON manually.
+        // Parse raw JSON since bodyParser is disabled
         const raw = await new Promise((resolve, reject) => {
           let data = "";
           req.on("data", (chunk) => (data += chunk));
@@ -149,12 +134,11 @@ export default async function handler(req, res) {
           return res.status(400).json({ message: "Invalid JSON body" });
         }
 
-        const { title: reqTitle, content: reqContent } = parsed;
-        title = reqTitle;
-        content = reqContent;
+        title = parsed.title;
+        content = parsed.content;
       }
 
-      // Validate mandatory fields
+      // Validate
       if (!title || typeof title !== "string" || title.trim() === "") {
         return res.status(400).json({ message: "Title is required" });
       }
@@ -168,48 +152,29 @@ export default async function handler(req, res) {
         updatedAt: new Date(),
       };
 
-      // Handle photo upload if present
+      // If photo uploaded, store as base64 in DB (works on deployed hosts)
       if (photoFile) {
         try {
-          // Create uploads directory
-          const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-          if (!fs.existsSync(uploadsDir)) {
-            fs.mkdirSync(uploadsDir, { recursive: true });
+          const tempPath = photoFile.filepath || photoFile.path || photoFile.tempFilePath || photoFile.file?.path;
+          const mimetype = photoFile.mimetype || photoFile.type || "image/jpeg";
+
+          if (!tempPath || !fs.existsSync(tempPath)) {
+            console.error("Uploaded file temp path missing or not found:", { tempPath, photoFile });
+            return res.status(500).json({ message: "Uploaded file not found on server" });
           }
 
-          // Generate unique filename
-          const fileExtension = path.extname(photoFile.originalFilename || '');
-          const uniqueFilename = `${Date.now()}-${Math.random().toString(36).substring(2)}${fileExtension}`;
-          const newPath = path.join(uploadsDir, uniqueFilename);
+          const buffer = fs.readFileSync(tempPath);
+          const base64Image = `data:${mimetype};base64,${buffer.toString("base64")}`;
+          try { fs.unlinkSync(tempPath); } catch (e) { /* ignore */ }
 
-          // Move file to uploads directory
-          fs.copyFileSync(photoFile.filepath, newPath);
-          
-          // Clean up temp file
-          fs.unlinkSync(photoFile.filepath);
-
-          // Store relative path in database
-          updateFields.photo = `/uploads/${uniqueFilename}`;
-
-          // Delete old photo if it exists
-          if (post.photo && typeof post.photo === "string") {
-            try {
-              const oldPhotoPath = path.join(process.cwd(), 'public', post.photo);
-              if (fs.existsSync(oldPhotoPath)) {
-                fs.unlinkSync(oldPhotoPath);
-              }
-            } catch (err) {
-              console.warn("Could not delete old photo file:", err);
-            }
-          }
-        } catch (error) {
-          console.error('Error handling photo upload:', error);
+          updateFields.photo = base64Image;
+        } catch (err) {
+          console.error("Error handling uploaded photo:", err);
           return res.status(500).json({ message: "Error uploading photo" });
         }
       }
 
       await db.collection("posts").updateOne({ _id: new ObjectId(postId) }, { $set: updateFields });
-
       const updatedPost = await db.collection("posts").findOne({ _id: new ObjectId(postId) });
 
       return res.status(200).json({
@@ -217,7 +182,7 @@ export default async function handler(req, res) {
         title: updatedPost.title,
         content: updatedPost.content,
         photo: updatedPost.photo || null,
-        photoUrl: updatedPost.photo || null, // Also return as photoUrl for frontend
+        photoUrl: updatedPost.photo || null,
         authorId: updatedPost.authorId,
         updatedAt: updatedPost.updatedAt || null,
       });
@@ -229,3 +194,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ message: "Internal server error" });
   }
 }
+
