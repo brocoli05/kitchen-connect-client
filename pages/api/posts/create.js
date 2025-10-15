@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import clientPromise from "../../../lib/mongodb";
 import formidable from 'formidable';
 import fs from 'fs';
+import path from 'path';
 
 // Disable body parsing for FormData
 export const config = {
@@ -59,14 +60,25 @@ export default async function handler(req, res) {
         createdAt: new Date(),
       };
 
-      // If image was uploaded, convert to base64 for storage
+      // If image was uploaded, save to /public/uploads (same as update flow)
       if (photoFile) {
-        const imageBuffer = fs.readFileSync(photoFile.filepath);
-        const base64Image = `data:${photoFile.mimetype};base64,${imageBuffer.toString('base64')}`;
-        newPost.photo = base64Image;
+        const tempPath = photoFile.filepath || photoFile.path || photoFile.tempFilePath || photoFile.file?.path;
+        const mimetype = photoFile.mimetype || photoFile.type || 'image/jpeg';
 
-        // Clean up temp file
-        fs.unlinkSync(photoFile.filepath);
+        if (!tempPath || !fs.existsSync(tempPath)) {
+          console.error('Uploaded file temp path missing or not found (create):', { tempPath, photoFile });
+          return res.status(500).json({ message: 'Uploaded file not found on server' });
+        }
+
+        try {
+          const buffer = fs.readFileSync(tempPath);
+          const base64Image = `data:${mimetype};base64,${buffer.toString('base64')}`;
+          try { fs.unlinkSync(tempPath); } catch (e) { /* ignore */ }
+          newPost.photo = base64Image;
+        } catch (err) {
+          console.error('Error handling uploaded file (create):', err);
+          return res.status(500).json({ message: 'Error uploading photo' });
+        }
       }
 
       await db.collection("posts").insertOne(newPost);
