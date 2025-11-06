@@ -1,213 +1,253 @@
-import { useForm } from "react-hook-form";
+// pages/posts/create.js
+import { useState, useEffect } from "react";
+import Head from "next/head";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
 import TopNavBar from "@/components/TopNavBar";
-import st from "@/styles/createPost.module.css";
-import api from "../../utils/api";
-import { Row, Col } from "react-bootstrap";
 
-export default function CreatePost() {
+/** Helper: check auth on client */
+const isSignedIn = () =>
+  typeof window !== "undefined" && !!localStorage.getItem("userToken");
+
+export default function CreatePostPage() {
   const router = useRouter();
-  const [selectedImage, setSelectedImage] = useState(null);
 
-  // secure protection to make sure unauthenticated user can't come to the page
+  // Form fields
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [timeMax, setTimeMax] = useState("");
+  const [difficulty, setDifficulty] = useState("");
+  const [dietary, setDietary] = useState("");
+  const [include, setInclude] = useState("");
+  const [exclude, setExclude] = useState("");
+  const [photoFile, setPhotoFile] = useState(null);
+
+  const [submitting, setSubmitting] = useState(false);
+
+  // Redirect to /login if not signed in
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const clientToken = localStorage.getItem("userToken");
-      if (!clientToken) {
-        router.push("/login");
-      }
+    if (!isSignedIn()) {
+      router.replace("/login");
     }
   }, [router]);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
-    defaultValues: {
-      title: "",
-      content: "",
-    },
-  });
+  // Validate and set image file
+  const onPhotoChange = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return setPhotoFile(null);
+    if (!f.type.startsWith("image/")) {
+      alert("Please select an image file.");
+      return;
+    }
+    if (f.size > 5 * 1024 * 1024) {
+      alert("Image must be less than 5MB.");
+      return;
+    }
+    setPhotoFile(f);
+  };
 
-  // When the post button is clicked
-  const submitForm = async (data) => {
-    const { title, content } = data;
+  // Submit handler
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Basic required fields
+    if (!title.trim() || !content.trim()) {
+      alert("Title and Content are required.");
+      return;
+    }
+
+    const token = localStorage.getItem("userToken");
+    if (!token) {
+      alert("Login required.");
+      router.push("/login");
+      return;
+    }
+
+    setSubmitting(true);
 
     try {
-      const clientToken = localStorage.getItem("userToken");
-      
-      // If there's an image, use FormData to send both text and binary data
-      if (selectedImage) {
-        const formData = new FormData();
-        formData.append('title', title);
-        formData.append('content', content);
-        formData.append('photo', selectedImage); // Send actual file
-        
-        const response = await fetch('/api/posts/create', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${clientToken}`
-          },
-          body: formData
+      let resp;
+
+      if (photoFile) {
+        // Use multipart/form-data when an image is attached
+        const fd = new FormData();
+        fd.append("title", title);
+        fd.append("content", content);
+        if (timeMax) fd.append("timeMax", String(timeMax));
+        if (difficulty) fd.append("difficulty", difficulty);
+        if (dietary) fd.append("dietary", dietary);
+        if (include) fd.append("include", include);
+        if (exclude) fd.append("exclude", exclude);
+        fd.append("photo", photoFile);
+
+        resp = await fetch("/api/posts/create", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` }, // do not set Content-Type manually
+          body: fd,
         });
-        
-        if (!response.ok) {
-          throw new Error('Failed to create post');
-        }
       } else {
-        // No image - use regular JSON approach
-        const create = await api.post(
-          "/posts/create",
-          { title, content },
-          { headers: { Authorization: `Bearer ${clientToken}` } }
-        );
-      }
-      
-      router.push("/mainpage");
-    } catch (error) {
-      console.error(
-        "Failed to post",
-        error.response ? error.response.data : error.message
-      );
-    }
-  };
+        // JSON request when there is no image file
+        const body = {
+          title,
+          content,
+          timeMax: timeMax ? Number(timeMax) : undefined,
+          difficulty: difficulty || undefined,
+          dietary: dietary || undefined,
+          include: include || undefined,
+          exclude: exclude || undefined,
+        };
 
-  const cancelButton = () => {
-    router.push("/mainpage");
-  };
-
-  // Handle image selection - simplified without preview
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
-        return;
+        resp = await fetch("/api/posts/create", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(body),
+        });
       }
-      
-      // Validate file size (5MB limit)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Image size must be less than 5MB');
-        return;
-      }
-      
-      setSelectedImage(file); // Store the actual file object
-    }
-  };
 
-  // Remove selected image
-  const removeImage = () => {
-    setSelectedImage(null);
-    
-    // Clear the file input value so the same file can be selected again
-    const fileInput = document.getElementById('imageUpload');
-    if (fileInput) {
-      fileInput.value = '';
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data?.message || "Failed to create post");
+      }
+
+      // Redirect to detail page using returned id
+      const id = data?.id;
+      if (id) {
+        router.push(`/posts/${id}`);
+      } else {
+        // Fallback: go to recipes list
+        router.push("/recipes");
+      }
+    } catch (err) {
+      console.error("Create post failed:", err);
+      alert(err.message || "Failed to create post");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <>
+      <Head>
+        <title>Create Post | Kitchen Connect</title>
+      </Head>
+
       <TopNavBar />
-      <p className={st.page}>
-        <b>Writing a Post</b>
-      </p>
 
-      <form onSubmit={handleSubmit(submitForm)} className={st.form}>
-        Title: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
-        <textarea
-          className={`${st.title} ${errors.title ? "inputError" : ""}`}
-          placeholder="Homemade Meat Lovers Pizza"
-          {...register("title", { required: true, maxLength: 35 })}
-        />
-        {errors.title?.type === "required" && (
-          <span className={`${st.titleError} inputErrorText`}>
-            This field is required
-          </span>
-        )}
-        {errors.title?.type === "maxLength" && (
-          <span className={`${st.titleError2} inputErrorText`}>
-            Title cannot contain more than 35 characters
-          </span>
-        )}
-        
-        {/* Image Upload Section*/}
-        <Row className={st.imageUploadSection}>
-          <Col md={3}>
-            <label htmlFor="imageUpload">Add Photo (Optional):</label>
-          </Col>
-          <Col md={9}>
-            <input
-              type="file"
-              id="imageUpload"
-              accept="image/*"
-              onChange={handleImageChange}
-              style={{ margin: "10px 0", display: "block" }}
-            />
-            {/* Show selected file name and remove button */}
-            {selectedImage && (
-              <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ 
-                  color: '#28a745', 
-                  fontSize: '14px',
-                  fontWeight: '500'
-                }}>
-                  ✓ {selectedImage.name}
-                </span>
-                <button
-                  type="button"
-                  onClick={removeImage}
-                  style={{
-                    background: '#dc3545',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '4px 8px',
-                    fontSize: '12px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Remove
-                </button>
-              </div>
-            )}
-          </Col>
-        </Row>
-        
-        <br />
-        Content: &nbsp; &nbsp; &nbsp; &nbsp;
-        <textarea
-          className={`${st.content} ${errors.content ? "inputError" : ""}`}
-          placeholder="Here is a simple recipe to make a delicious meat lovers pizza: ..."
-          {...register("content", { required: true })}
-          rows={6}
-          style={{ resize: 'vertical', minHeight: '120px', maxHeight: '300px' }}
-        />
-        {errors.content?.type === "required" && (
-          <span className={`${st.contentError} inputErrorText`}>
-            This field is required
-          </span>
-        )}
-        
-        <br />
-        <br />
-        <div className={st.buttonGap}>
-          <button
-            className={st.cancelButton}
-            type="button"
-            onClick={cancelButton}
+      <div style={{ maxWidth: 820, margin: "72px auto", padding: "0 16px" }}>
+        <h1 style={{ marginBottom: 16 }}>Create a New Recipe</h1>
+
+        <form onSubmit={handleSubmit} style={{ display: "grid", gap: 10 }}>
+          {/* Required fields */}
+          <input
+            placeholder="Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            style={{ padding: 10, fontSize: 16 }}
+          />
+          <textarea
+            rows={6}
+            placeholder="Write your recipe..."
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            required
+            style={{ padding: 10 }}
+          />
+
+          {/* Optional, filterable fields */}
+          <div
+            style={{
+              display: "grid",
+              gap: 8,
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            }}
           >
-            Cancel
-          </button>
+            <input
+              type="number"
+              min={0}
+              placeholder="Max time (min)"
+              value={timeMax}
+              onChange={(e) => setTimeMax(e.target.value)}
+              style={{ padding: 10 }}
+            />
 
-          <button className={st.submitButton} type="submit">
-            Post
-          </button>
-        </div>
-      </form>
+            <select
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value)}
+              style={{ padding: 10 }}
+            >
+              <option value="">Any difficulty</option>
+              <option value="Easy">Easy</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard</option>
+            </select>
+
+            <input
+              placeholder="Dietary (e.g. vegan, halal)"
+              value={dietary}
+              onChange={(e) => setDietary(e.target.value)}
+              style={{ padding: 10 }}
+            />
+
+            <input
+              placeholder="Include ingredients (comma)"
+              value={include}
+              onChange={(e) => setInclude(e.target.value)}
+              style={{ padding: 10 }}
+            />
+
+            <input
+              placeholder="Exclude ingredients (comma)"
+              value={exclude}
+              onChange={(e) => setExclude(e.target.value)}
+              style={{ padding: 10 }}
+            />
+          </div>
+
+          {/* Optional image */}
+          <div>
+            <label style={{ display: "block", fontSize: 14, color: "#555" }}>
+              Add Photo (optional)
+            </label>
+            <input type="file" accept="image/*" onChange={onPhotoChange} />
+          </div>
+
+          {/* Submit / Cancel */}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="submit"
+              disabled={submitting}
+              style={{
+                padding: "10px 14px",
+                background: "#2563eb",
+                color: "#fff",
+                border: "none",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}
+            >
+              {submitting ? "Submitting..." : "Create"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => router.push("/recipes")}
+              style={{
+                padding: "10px 14px",
+                background: "#6b7280",
+                color: "#fff",
+                border: "none",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
     </>
   );
 }

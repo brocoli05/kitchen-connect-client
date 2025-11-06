@@ -254,28 +254,54 @@ export default function RecipesPage() {
         {/* --- Recipe Grid --- */}
         <div className={s.grid}>
           {items.map((r) => {
-            const pid = normalizeId(r.id ?? r._id);
-            const uid = normalizeId(r.authorId ?? r.userId);
+            // derive tokens for include/exclude; support both schema keys
+            const includeTokens = String(r.include ?? r.includeIngredients ?? "")
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean);
+
+            const excludeTokens = String(r.exclude ?? r.excludeIngredients ?? "")
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean);
+
+            // Optionally cap how many chips we render to keep UI tidy
+            const MAX_CHIPS = 6;
+            const moreInclude = Math.max(0, includeTokens.length - MAX_CHIPS);
+            const moreExclude = Math.max(0, excludeTokens.length - MAX_CHIPS);
 
             return (
-              <article key={pid || Math.random()} className={s.card}>
+              <article key={r._id || r.id} className={s.card}>
                 <div className={s.cardHeader}>
-                  <img
-                    src={r.photo || "/photo.svg"}
-                    alt={r.title ? `Recipe: ${r.title}` : "Recipe"}
-                    className={s.thumb}
-                  />
+                  <img src={r.photo || "/photo.svg"} alt="Recipe" className={s.thumb} />
                   <div>
-                    <h2 className={s.cardTitle}>{r.title || "(untitled)"}</h2>
+                    <h2 className={s.cardTitle}>{r.title}</h2>
+
+                    {/* --- All badges --- */}
                     <div className={s.meta}>
-                      {r.difficulty && (
-                        <span className={s.badge}>{r.difficulty}</span>
+                      {/* Difficulty / Time / Dietary */}
+                      {r.difficulty && <span className={s.badge}>{r.difficulty}</span>}
+                      {r.timeMax && <span className={s.badge}>{r.timeMax} min</span>}
+                      {r.dietary && <span className={s.badge}>{r.dietary}</span>}
+
+                      {/* Include tokens */}
+                      {includeTokens.slice(0, MAX_CHIPS).map((t, i) => (
+                        <span key={`inc-${i}`} className={s.badge}>
+                          + {t}
+                        </span>
+                      ))}
+                      {moreInclude > 0 && (
+                        <span className={s.badge}>+{moreInclude} more</span>
                       )}
-                      {r.timeMax && (
-                        <span className={s.badge}>{r.timeMax} min</span>
-                      )}
-                      {r.dietary && (
-                        <span className={s.badge}>{r.dietary}</span>
+
+                      {/* Exclude tokens */}
+                      {excludeTokens.slice(0, MAX_CHIPS).map((t, i) => (
+                        <span key={`exc-${i}`} className={s.badge} title="excluded">
+                          − {t}
+                        </span>
+                      ))}
+                      {moreExclude > 0 && (
+                        <span className={s.badge}>+{moreExclude} more</span>
                       )}
                     </div>
                   </div>
@@ -287,25 +313,10 @@ export default function RecipesPage() {
                 </p>
 
                 <div className={s.cardActions}>
-                  {pid ? (
-                    <Link className={s.link} href={`/posts/${encodeURIComponent(pid)}`}>
-                      View
-                    </Link>
-                  ) : (
-                    <button className={s.link} disabled title="No post id">
-                      View
-                    </button>
-                  )}
-
-                  {uid ? (
-                    <Link className={s.link} href={`/users/${encodeURIComponent(uid)}`}>
-                      Author
-                    </Link>
-                  ) : (
-                    <button className={s.link} disabled title="No author id">
-                      Author
-                    </button>
-                  )}
+                  <a className={s.link} href={`/posts/${r._id || r.id}`}>View</a>
+                  <a className={s.link} href={`/users/${r.authorId || r.userId || ""}`}>
+                    Author
+                  </a>
                 </div>
               </article>
             );

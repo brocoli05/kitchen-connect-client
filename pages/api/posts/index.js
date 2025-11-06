@@ -14,8 +14,6 @@ function toInt(v, fallback) {
 
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).end();
-
-  // Avoid any caching during search/filtering
   res.setHeader("Cache-Control", "no-store");
 
   try {
@@ -36,49 +34,65 @@ export default async function handler(req, res) {
     const limit = toInt(req.query.limit, 12);
     const skip = (page - 1) * limit;
 
-    // ---- Build MongoDB filter ----
-    const filter = {};
+    // We'll compose conditions using $and to avoid mixing $or blocks unexpectedly
+    const and = [];
 
-    // Keyword: match title or content (and optionally dietary if you store it)
+    // 🔹 Keyword search across title/content/dietary
     if (q && String(q).trim() !== "") {
-      filter.$or = [
-        { title: { $regex: rx(q) } },
-        { content: { $regex: rx(q) } },
-        { dietary: { $regex: rx(q) } }, // safe even if field absent
-      ];
+      and.push({
+        $or: [
+          { title:   { $regex: rx(q) } },
+          { content: { $regex: rx(q) } },
+          { dietary: { $regex: rx(q) } },
+        ],
+      });
     }
 
-    // Optional filters (only apply when present)
-    if (difficulty) filter.difficulty = difficulty;
-    if (dietary) filter.dietary = { $regex: rx(dietary) };
-    if (timeMax) filter.timeMax = { $lte: toInt(timeMax, 0) };
+    // 🔹 Difficulty
+    if (difficulty) and.push({ difficulty });
 
-    if (include) filter.includeIngredients = { $regex: rx(include) };
-    if (exclude) filter.excludeIngredients = { $not: { $regex: rx(exclude) } };
+    // 🔹 Dietary
+    if (dietary) and.push({ dietary: { $regex: rx(dietary) } });
 
-    // ---- Sorting ----
+    // 🔹 Max time (numeric)
+    if (timeMax) and.push({ timeMax: { $lte: toInt(timeMax, 0) } });
+
+    // 🔹 Include ingredients (match presence)
+    if (include) {
+      // Support both array-of-strings and comma-separated string fields
+      and.push({
+        $or: [
+          { includeIngredients: { $regex: rx(include) } },                // string field
+          { includeIngredients: { $elemMatch: { $regex: rx(include) } } } // array field
+        ],
+      });
+    }
+
+    // 🔸 Exclude (positive match) — show only recipes that declare they exclude this ingredient
+    if (exclude) {
+      and.push({
+        $or: [
+          { excludeIngredients: { $regex: rx(exclude) } },                // string field ("pork, beef")
+          { excludeIngredients: { $elemMatch: { $regex: rx(exclude) } } } // array field (["pork","beef"])
+        ],
+      });
+    }
+
+    // Build final filter
+    const filter = and.length ? { $and: and } : {};
+
     const sortOption =
-      sort === "newest"
-        ? { createdAt: -1 }
-        : sort === "liked"
-        ? { likeCount: -1 }
-        : {}; // relevance fallback = keep insertion order or $text if you add index
-
-    // DEBUG: check the actual filter used
-    console.log("[/api/posts] filter:", JSON.stringify(filter));
+      sort === "newest" ? { createdAt: -1 } :
+      sort === "liked"  ? { likeCount: -1 } :
+      {}; // default relevance fallback
 
     const coll = db.collection("posts");
-
     const [items, total] = await Promise.all([
       coll.find(filter).sort(sortOption).skip(skip).limit(limit).toArray(),
       coll.countDocuments(filter),
     ]);
 
-    // normalize _id to id
-    const normalized = items.map((d) => ({
-      ...d,
-      id: String(d._id),
-    }));
+    const normalized = items.map((d) => ({ ...d, id: String(d._id) }));
 
     return res.status(200).json({
       items: normalized,

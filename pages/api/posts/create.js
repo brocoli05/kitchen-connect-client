@@ -4,13 +4,11 @@ import jwt from "jsonwebtoken";
 import clientPromise from "../../../lib/mongodb";
 import formidable from 'formidable';
 import fs from 'fs';
+import path from 'path';
 
-// Disable body parsing for FormData
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+/** Auth helper */
+const isSignedIn = () =>
+  typeof window !== "undefined" && !!localStorage.getItem("userToken");
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -25,6 +23,15 @@ export default async function handler(req, res) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
+    // Helper: promisify formidable.parse
+    const parseForm = (form, req) =>
+      new Promise((resolve, reject) => {
+        form.parse(req, (err, fields, files) => {
+          if (err) return reject(err);
+          resolve([fields, files]);
+        });
+      });
+
     // Check if request has FormData (multipart)
     if (req.headers['content-type']?.includes('multipart/form-data')) {
       // Handle FormData with image upload
@@ -34,8 +41,8 @@ export default async function handler(req, res) {
         filter: ({ mimetype }) => mimetype && mimetype.includes('image'),
       });
 
-      const [fields, files] = await form.parse(req);
-      
+      const [fields, files] = await parseForm(form, req);
+
       const title = Array.isArray(fields.title) ? fields.title[0] : fields.title;
       const content = Array.isArray(fields.content) ? fields.content[0] : fields.content;
       const photoFile = Array.isArray(files.photo) ? files.photo[0] : files.photo;
@@ -50,22 +57,48 @@ export default async function handler(req, res) {
         createdAt: new Date(),
       };
 
-      // If image was uploaded, convert to base64 for storage
+      // If image was uploaded, save to /public/uploads (same as update flow)
       if (photoFile) {
-        const imageBuffer = fs.readFileSync(photoFile.filepath);
-        const base64Image = `data:${photoFile.mimetype};base64,${imageBuffer.toString('base64')}`;
-        newPost.photo = base64Image;
-        
-        // Clean up temp file
-        fs.unlinkSync(photoFile.filepath);
+        const tempPath = photoFile.filepath || photoFile.path || photoFile.tempFilePath || photoFile.file?.path;
+        const mimetype = photoFile.mimetype || photoFile.type || 'image/jpeg';
+
+        if (!tempPath || !fs.existsSync(tempPath)) {
+          console.error('Uploaded file temp path missing or not found (create):', { tempPath, photoFile });
+          return res.status(500).json({ message: 'Uploaded file not found on server' });
+        }
+
+        try {
+          const buffer = fs.readFileSync(tempPath);
+          const base64Image = `data:${mimetype};base64,${buffer.toString('base64')}`;
+          try { fs.unlinkSync(tempPath); } catch (e) { /* ignore */ }
+          newPost.photo = base64Image;
+        } catch (err) {
+          console.error('Error handling uploaded file (create):', err);
+          return res.status(500).json({ message: 'Error uploading photo' });
+        }
       }
 
       await db.collection("posts").insertOne(newPost);
       res.status(201).json({ message: "Post created successfully" });
       
     } else {
-      // Handle regular JSON request (no image)
-      const { title, content } = req.body;
+      // Handle regular JSON request (no image). Since bodyParser is disabled,
+      // read raw body and parse JSON manually.
+      const raw = await new Promise((resolve, reject) => {
+        let data = "";
+        req.on("data", (chunk) => (data += chunk));
+        req.on("end", () => resolve(data));
+        req.on("error", (err) => reject(err));
+      });
+
+      let parsed = {};
+      try {
+        parsed = raw ? JSON.parse(raw) : {};
+      } catch (err) {
+        return res.status(400).json({ message: "Invalid JSON body" });
+      }
+
+      const { title, content } = parsed;
 
       const client = await clientPromise;
       const db = client.db("kitchen-connect");
