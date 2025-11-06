@@ -1,36 +1,38 @@
-// pages/posts/create.js
-import { useState, useEffect } from "react";
+// pages/posts/create.jsx
+import { useState } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import TopNavBar from "@/components/TopNavBar";
 
-/** Helper: check auth on client */
+/** Check auth via localStorage token */
 const isSignedIn = () =>
   typeof window !== "undefined" && !!localStorage.getItem("userToken");
 
 export default function CreatePostPage() {
   const router = useRouter();
 
-  // Form fields
+  // Core fields
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+
+  // Optional searchable/filterable recipe fields
   const [timeMax, setTimeMax] = useState("");
   const [difficulty, setDifficulty] = useState("");
   const [dietary, setDietary] = useState("");
   const [include, setInclude] = useState("");
   const [exclude, setExclude] = useState("");
+
+  // Image
   const [photoFile, setPhotoFile] = useState(null);
 
   const [submitting, setSubmitting] = useState(false);
 
-  // Redirect to /login if not signed in
-  useEffect(() => {
-    if (!isSignedIn()) {
-      router.replace("/login");
-    }
-  }, [router]);
+  // Redirect unauthenticated users
+  if (typeof window !== "undefined" && !isSignedIn()) {
+    router.replace("/login");
+  }
 
-  // Validate and set image file
+  /** Validate and set file */
   const onPhotoChange = (e) => {
     const f = e.target.files?.[0];
     if (!f) return setPhotoFile(null);
@@ -45,30 +47,21 @@ export default function CreatePostPage() {
     setPhotoFile(f);
   };
 
-  // Submit handler
+  /** Create post -> redirect to /posts/[id] */
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Basic required fields
     if (!title.trim() || !content.trim()) {
       alert("Title and Content are required.");
       return;
     }
+    setSubmitting(true);
 
     const token = localStorage.getItem("userToken");
-    if (!token) {
-      alert("Login required.");
-      router.push("/login");
-      return;
-    }
-
-    setSubmitting(true);
 
     try {
       let resp;
-
       if (photoFile) {
-        // Use multipart/form-data when an image is attached
+        // Use multipart/form-data when image exists
         const fd = new FormData();
         fd.append("title", title);
         fd.append("content", content);
@@ -81,11 +74,11 @@ export default function CreatePostPage() {
 
         resp = await fetch("/api/posts/create", {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` }, // do not set Content-Type manually
+          headers: { Authorization: `Bearer ${token}` },
           body: fd,
         });
       } else {
-        // JSON request when there is no image file
+        // Use JSON when no image
         const body = {
           title,
           content,
@@ -108,21 +101,20 @@ export default function CreatePostPage() {
 
       const data = await resp.json();
       if (!resp.ok) {
-        throw new Error(data?.message || "Failed to create post");
+        alert(data?.message || "Failed to create post.");
+        setSubmitting(false);
+        return;
       }
 
-      // Redirect to detail page using returned id
-      const id = data?.id;
-      if (id) {
-        router.push(`/posts/${id}`);
+      // Redirect to detail page using inserted id
+      if (data?.id) {
+        router.push(`/posts/${data.id}`);
       } else {
-        // Fallback: go to recipes list
         router.push("/recipes");
       }
     } catch (err) {
       console.error("Create post failed:", err);
-      alert(err.message || "Failed to create post");
-    } finally {
+      alert("Create failed. Please try again.");
       setSubmitting(false);
     }
   };
@@ -132,31 +124,30 @@ export default function CreatePostPage() {
       <Head>
         <title>Create Post | Kitchen Connect</title>
       </Head>
-
       <TopNavBar />
-
       <div style={{ maxWidth: 820, margin: "72px auto", padding: "0 16px" }}>
-        <h1 style={{ marginBottom: 16 }}>Create a New Recipe</h1>
+        <h1 style={{ marginBottom: 16 }}>Create Post</h1>
 
-        <form onSubmit={handleSubmit} style={{ display: "grid", gap: 10 }}>
-          {/* Required fields */}
+        <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
           <input
+            type="text"
             placeholder="Title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            required
             style={{ padding: 10, fontSize: 16 }}
-          />
-          <textarea
-            rows={6}
-            placeholder="Write your recipe..."
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
             required
-            style={{ padding: 10 }}
           />
 
-          {/* Optional, filterable fields */}
+          <textarea
+            placeholder="Content"
+            rows={8}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            style={{ padding: 10 }}
+            required
+          />
+
+          {/* Optional recipe attributes */}
           <div
             style={{
               display: "grid",
@@ -185,13 +176,15 @@ export default function CreatePostPage() {
             </select>
 
             <input
-              placeholder="Dietary (e.g. vegan, halal)"
+              type="text"
+              placeholder="Dietary (e.g., vegan, halal)"
               value={dietary}
               onChange={(e) => setDietary(e.target.value)}
               style={{ padding: 10 }}
             />
 
             <input
+              type="text"
               placeholder="Include ingredients (comma)"
               value={include}
               onChange={(e) => setInclude(e.target.value)}
@@ -199,6 +192,7 @@ export default function CreatePostPage() {
             />
 
             <input
+              type="text"
               placeholder="Exclude ingredients (comma)"
               value={exclude}
               onChange={(e) => setExclude(e.target.value)}
@@ -206,38 +200,33 @@ export default function CreatePostPage() {
             />
           </div>
 
-          {/* Optional image */}
           <div>
-            <label style={{ display: "block", fontSize: 14, color: "#555" }}>
-              Add Photo (optional)
-            </label>
+            <label style={{ fontSize: 14, color: "#555" }}>Add Photo (optional)</label>
             <input type="file" accept="image/*" onChange={onPhotoChange} />
           </div>
 
-          {/* Submit / Cancel */}
           <div style={{ display: "flex", gap: 8 }}>
             <button
               type="submit"
               disabled={submitting}
               style={{
-                padding: "10px 14px",
                 background: "#2563eb",
                 color: "#fff",
+                padding: "10px 14px",
                 border: "none",
                 borderRadius: 6,
                 cursor: "pointer",
               }}
             >
-              {submitting ? "Submitting..." : "Create"}
+              {submitting ? "Creating..." : "Create"}
             </button>
-
             <button
               type="button"
               onClick={() => router.push("/recipes")}
               style={{
-                padding: "10px 14px",
                 background: "#6b7280",
                 color: "#fff",
+                padding: "10px 14px",
                 border: "none",
                 borderRadius: 6,
                 cursor: "pointer",

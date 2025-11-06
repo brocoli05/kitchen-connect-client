@@ -283,7 +283,7 @@ export default function RecipesPage() {
                       {r.difficulty && <span className={s.badge}>{r.difficulty}</span>}
                       {r.timeMax && <span className={s.badge}>{r.timeMax} min</span>}
                       {r.dietary && <span className={s.badge}>{r.dietary}</span>}
-
+                      <span className={s.badge}>♥ {typeof r.likeCount === "number" ? r.likeCount : 0}</span>
                       {/* Include tokens */}
                       {includeTokens.slice(0, MAX_CHIPS).map((t, i) => (
                         <span key={`inc-${i}`} className={s.badge}>

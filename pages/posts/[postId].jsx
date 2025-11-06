@@ -1,40 +1,46 @@
 // pages/posts/[postId].jsx
 import Link from "next/link";
 import CommentSection from "@/components/CommentSection";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/router";
-import api from "@/utils/api";
+import api from "../../utils/api";
 import TopNavBar from "@/components/TopNavBar";
 import { Row, Col } from "react-bootstrap";
-import st from "@/styles/createPost.module.css";
+import styles from "@/styles/postDetail.module.css"; // ← new CSS module
 
-/**
- * Post detail page: shows a single post, supports favorite/save,
- * owner-only edit/delete, and optional image update via FormData.
- */
 export default function PostPage({ post, notFound, postIdFromProps }) {
   const router = useRouter();
-  const postId = post?.id || postIdFromProps;
+  const postId = post?.id;
 
-  // auth / ownership / edit state
   const [currentUser, setCurrentUser] = useState(null);
   const [isOwner, setIsOwner] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-
-  // edit form state
   const [form, setForm] = useState({
     title: post?.title || "",
     content: post?.content || "",
   });
   const [errors, setErrors] = useState({});
-
-  // favorite state
   const [isFavorited, setIsFavorited] = useState(false);
-
-  // optional image update
   const [selectedImage, setSelectedImage] = useState(null);
 
-  // Load current user and determine ownership
+  const [repostWorking, setRepostWorking] = useState(false);
+  const [repostCount, setRepostCount] = useState(post.repostCount || 0);
+  const [isReposted, setIsReposted] = useState(false);
+
+  const [likeCount, setLikeCount] = useState(post.likeCount || 0);
+  const [liked, setLiked] = useState(false);
+
+  // Early 404 guard
+  if (notFound || !post) {
+    return (
+      <div className={styles.fallback}>
+        <p>User not found.</p>
+        <Link className={styles.backLink} href="/">← Back</Link>
+      </div>
+    );
+  }
+
+  // Load current user & ownership
   useEffect(() => {
     const token =
       typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
@@ -51,113 +57,242 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
       .catch(() => {});
   }, [post]);
 
-  // Load favorite status
+  // Restore cached userInfo (optional)
   useEffect(() => {
-    if (!postIdFromProps) return;
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
+    const token = localStorage.getItem("userToken");
     if (!token) return;
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      if (userInfo) setCurrentUser(userInfo);
+    } catch (e) {
+      console.error("Failed to parse user info:", e);
+    }
+  }, []);
 
-    (async () => {
+  // Initial liked state
+  useEffect(() => {
+    const token = localStorage.getItem("userToken");
+    if (!token) return;
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      if (userInfo && post.likedBy?.[userInfo.id]) setLiked(true);
+    } catch {}
+  }, [post]);
+
+  // Favorite status
+  useEffect(() => {
+    const checkFavorite = async () => {
+      const token = localStorage.getItem("userToken");
+      if (!token) return;
       try {
         const res = await api.get(`posts/${postIdFromProps}/isFavorite`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setIsFavorited(!!res.data?.isFavorited);
+        setIsFavorited(res.data?.isFavorited ?? false);
       } catch (error) {
-        console.error("Failed to get favorite status", error);
+        console.error("Failed to get favorite state:", error);
       }
-    })();
+    };
+    if (postIdFromProps) checkFavorite();
   }, [postIdFromProps]);
 
   // Toggle favorite
   const handleSaveButton = async () => {
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
+    const token = localStorage.getItem("userToken");
     if (!token) return;
 
     try {
-      const res = await api.post(`posts/${postIdFromProps}/favorite`, null, {
+      const resp = await fetch(`/api/posts/${postIdFromProps}/favorite`, {
+        method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
-      setIsFavorited(!!res.data?.isFavorited);
-    } catch (error) {
-      console.error("Failed to toggle favorite", error);
+
+      if (!resp.ok) {
+        const text = await resp.text();
+        console.error("Favorite failed:", resp.status, text);
+        alert(`Favorite failed: ${resp.status}`);
+        return;
+      }
+
+      const data = await resp.json();
+      setIsFavorited(data?.isFavorited ?? false);
+    } catch (e) {
+      console.error("Favorite error:", e);
+      alert("Network error while favoriting.");
     }
   };
 
-  // Guard: not found
-  if (notFound || !post) {
-    return (
-      <>
-        <TopNavBar />
-        <div style={{ padding: 24 }}>
-          <p>Post not found.</p>
-          <Link href="/">← Back</Link>
-        </div>
-      </>
-    );
-  }
 
-  // --- Owner actions: Edit/Delete ---
 
-  /** Begin edit mode with current post content */
-  const startEdit = () => {
-    setForm({ title: post.title || "", content: post.content || "" });
-    setErrors({});
-    setSelectedImage(null);
-    setIsEditing(true);
-  };
-
-  /** Cancel edit and reset form/image/error state */
-  const cancelEdit = () => {
-    setIsEditing(false);
-    setErrors({});
-    setSelectedImage(null);
-    const fileInput = document.getElementById("imageUpload");
-    if (fileInput) fileInput.value = "";
-  };
-
-  /** Controlled inputs for edit form */
-  const onChange = (e) => {
-    const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
-    if (errors[name]) setErrors((s) => ({ ...s, [name]: "" }));
-  };
-
-  /** Handle image file selection and basic validation */
-  const handleImageChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) {
-      setSelectedImage(null);
+  const handleRepost = async () => {
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
+    if (!token) {
+      alert("Please sign in to repost.");
+      router.push("/login");
       return;
     }
+
+    try {
+      const resp = await fetch(`/api/posts/${postId}`, {
+        method: "GET",
+      });
+      if (!resp.ok) {
+        alert("Post not found.");
+        return;
+      }
+
+      const r = await fetch(`/api/posts/${postId}/repost`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await r.json();
+
+      if (!r.ok) {
+        alert(data?.message || "Failed to repost.");
+        return;
+      }
+
+      alert("Reposted!");
+      // Go to new repost page if id is present
+      if (data?.id) {
+        router.push(`/posts/${data.id}`);
+      }
+    } catch (err) {
+      console.error("Repost failed:", err);
+      alert("Repost failed. Please try again.");
+    }
+  };
+
+  // Toggle repost (non-owner)
+  const toggleRepost = async () => {
+    try {
+      setRepostWorking(true);
+  
+      const token = localStorage.getItem("userToken");
+      const res = await fetch(`/api/posts/${postId}/repost`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      const data = await res.json();
+  
+      if (res.ok) {
+        // Update UI states
+        setIsReposted(data.isReposted);
+        setRepostCount(data.repostCount);
+  
+        // Success alert
+        alert(data.isReposted ? "Repost removed." : "Repost successful!");
+      } else {
+        alert(data.message || "Failed to repost.");
+      }
+    } catch (err) {
+      console.error("Repost error:", err);
+      alert("An error occurred while reposting.");
+    } finally {
+      setRepostWorking(false);
+    }
+  };
+
+  // Like/Unlike
+  const handleLike = async () => {
+    const token = localStorage.getItem("userToken");
+    if (!token) {
+      alert("Please log in to like posts");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/posts/${postId}/like`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setLiked(data.isLiked);
+        setLikeCount((prev) => prev + (data.isLiked ? 1 : -1));
+      }
+    } catch (err) {
+      console.error("Failed to like post:", err);
+    }
+  };
+
+  // Delete post (owner)
+  const handleDelete = async () => {
+    const ok = window.confirm(
+      "Are you sure you want to delete this post? This action cannot be undone."
+    );
+    if (!ok) return;
+
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
+    try {
+      const resp = await fetch(`/api/posts/${postId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (resp.ok) {
+        alert("Post deleted");
+        router.push("/");
+      } else {
+        const data = await resp.json();
+        alert(data.message || "Failed to delete post");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Failed to delete post. Please try again.");
+    }
+  };
+
+  // Image select (edit mode)
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return setSelectedImage(null);
     if (!file.type.startsWith("image/")) {
-      alert("Please select an image file.");
-      e.target.value = "";
+      alert("Please select an image file");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      alert("Image size must be less than 5MB.");
-      e.target.value = "";
+      alert("Image size must be less than 5MB");
       return;
     }
     setSelectedImage(file);
   };
 
-  /** Remove the selected image before saving */
+  // Clear selected image
   const removeImage = () => {
     setSelectedImage(null);
     const fileInput = document.getElementById("imageUpload");
     if (fileInput) fileInput.value = "";
   };
 
-  /** Persist edits. If image present, use FormData; else JSON */
+  // Edit toggles
+  const startEdit = () => {
+    setForm({ title: post.title || "", content: post.content || "" });
+    setErrors({});
+    setIsEditing(true);
+  };
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setErrors({});
+    setSelectedImage(null);
+  };
+
+  // Edit field change
+  const onChange = (e) => {
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
+    if (errors[name]) setErrors((s) => ({ ...s, [name]: "" }));
+  };
+
+  // Save edit
   const saveEdit = async () => {
-    // client-side validation
     const newErrors = {};
-    if (!form.title || form.title.trim() === "") newErrors.title = "Title is required";
-    if (!form.content || form.content.trim() === "") newErrors.content = "Content is required";
+    if (!form.title || !form.title.trim()) newErrors.title = "Title is required";
+    if (!form.content || !form.content.trim()) newErrors.content = "Content is required";
     if (Object.keys(newErrors).length) {
       setErrors(newErrors);
       return;
@@ -165,11 +300,9 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
 
     const token =
       typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
-
     try {
       let resp;
       if (selectedImage) {
-        // Use multipart/form-data for image update
         const formData = new FormData();
         formData.append("title", form.title);
         formData.append("content", form.content);
@@ -177,11 +310,10 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
 
         resp = await fetch(`/api/posts/${postId}`, {
           method: "PUT",
-          headers: { Authorization: `Bearer ${token}` }, // do not set Content-Type
+          headers: { Authorization: `Bearer ${token}` },
           body: formData,
         });
       } else {
-        // JSON-only update
         resp = await fetch(`/api/posts/${postId}`, {
           method: "PUT",
           headers: {
@@ -193,61 +325,23 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
       }
 
       const data = await resp.json();
-      if (!resp.ok) {
-        alert(data?.message || "Failed to update post");
-        return;
+      if (resp.ok) {
+        post.title = data.title;
+        post.content = data.content;
+        if (data.photoUrl) post.photo = data.photoUrl;
+        setIsEditing(false);
+        setSelectedImage(null);
+        alert("Post updated");
+        window.location.reload(); // quick refresh to reflect new image
+      } else {
+        alert(data.message || "Failed to update post");
       }
-
-      // Optimistic UI update
-      post.title = data.title ?? post.title;
-      post.content = data.content ?? post.content;
-      if (data.photo || data.photoUrl) {
-        post.photo = data.photo ?? data.photoUrl;
-      }
-
-      setIsEditing(false);
-      setSelectedImage(null);
-      alert("Post updated");
-
-      // Optional: hard reload to ensure fresh data (e.g., image base64 changes)
-      window.location.reload();
     } catch (e) {
-      console.error("Update failed", e);
+      console.error(e);
       alert("Failed to update post. Please try again.");
     }
   };
 
-  /** Delete post (owner only) */
-  const handleDelete = async () => {
-    const ok = window.confirm(
-      "Are you sure you want to delete this post? This action cannot be undone."
-    );
-    if (!ok) return;
-
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
-
-    try {
-      const resp = await fetch(`/api/posts/${postId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!resp.ok) {
-        const data = await resp.json();
-        alert(data?.message || "Failed to delete post");
-        return;
-      }
-
-      alert("Post deleted");
-      router.push("/");
-    } catch (e) {
-      console.error(e);
-      alert("Failed to delete post. Please try again.");
-    }
-  };
-
-  // simple shared badge style for meta fields
   const badgeStyle = {
     border: "1px solid #e5e7eb",
     background: "#f9fafb",
@@ -259,24 +353,39 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   return (
     <>
       <TopNavBar />
-      <div style={{ maxWidth: 820, margin: "72px auto", padding: "0 16px" }}>
-        <Link href="/">← Back</Link>
+      <div className={styles.container}>
+        <Link className={styles.backLink} href="/">← Back</Link>
 
-        <h1 style={{ margin: "16px 0 8px" }}>{post.title}</h1>
+        <h1 className={styles.title}>{post.title}</h1>
 
-        {/* Meta badges (optional fields if present) */}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "8px 0 12px" }}>
-          {post?.difficulty && <span style={badgeStyle}>Difficulty: {post.difficulty}</span>}
-          {Number.isFinite(post?.timeMax) && <span style={badgeStyle}>Max: {post.timeMax} min</span>}
-          {post?.dietary && <span style={badgeStyle}>Dietary: {post.dietary}</span>}
-          {post?.include && <span style={badgeStyle}>Include: {post.include}</span>}
-          {post?.exclude && <span style={badgeStyle}>Exclude: {post.exclude}</span>}
+       {/* ---- Repost badge block (NEW) ---- */}
+       {post?.repostOf && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+            <span style={badgeStyle}>Repost</span>
+            {post?.original?.id ? (
+              <span style={{ fontSize: 13, color: "#374151" }}>
+                Reposted from{" "}
+                <Link href={`/posts/${post.original.id}`} style={{ textDecoration: "underline" }}>
+                  {post.original.title || "original post"}
+                </Link>
+              </span>
+            ) : (
+              <span style={{ fontSize: 13, color: "#6b7280" }}>Reposted from original post</span>
+            )}
+          </div>
+        )}
+        
+        {/* Meta badges */}
+        <div className={styles.metaBadges}>
+          {post?.difficulty && <span className={styles.badge}>Difficulty: {post.difficulty}</span>}
+          {Number.isFinite(post?.timeMax) && <span className={styles.badge}>Max: {post.timeMax} min</span>}
+          {post?.dietary && <span className={styles.badge}>Dietary: {post.dietary}</span>}
         </div>
 
-        {/* Created at + Favorite */}
+        {/* Date + actions */}
         {post.createdAt && (
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-            <p style={{ color: "#666", marginTop: 0 }}>
+          <div className={styles.headerRow}>
+            <p className={styles.createdAt}>
               {new Date(post.createdAt).toLocaleDateString("en-US", {
                 year: "numeric",
                 month: "numeric",
@@ -287,190 +396,129 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
                 hour12: true,
               })}
             </p>
-            <button
-              onClick={handleSaveButton}
-              style={{
-                padding: "8px 16px",
-                fontSize: 16,
-                border: "1px solid #333",
-                borderRadius: 4,
-                backgroundColor: isFavorited ? "#333" : "#fff",
-                color: isFavorited ? "#fff" : "#333",
-                cursor: "pointer",
-                fontWeight: isFavorited ? "bold" : "normal",
-              }}
-            >
-              {isFavorited ? "Saved" : "Save"}
-            </button>
+            <div className={styles.actionsRight}>
+              <button
+                onClick={handleLike}
+                className={`${styles.btn} ${liked ? styles.btnLikeOn : styles.btnLikeOff}`}
+                aria-pressed={liked}
+                aria-label="Like"
+              >
+                <span className={styles.heart}>❤️</span> {likeCount}
+              </button>
+
+              <button
+                onClick={handleSaveButton}
+                className={`${styles.btn} ${isFavorited ? styles.btnSavedOn : styles.btnSavedOff}`}
+                aria-pressed={isFavorited}
+                aria-label="Save"
+              >
+                {isFavorited ? "Saved" : "Save"}
+              </button>
+              
+            </div>
           </div>
         )}
 
-        {/* Post content */}
-        <article
-          style={{
-            whiteSpace: "pre-wrap",
-            lineHeight: 1.6,
-            background: "#fafafa",
-            border: "1px solid #eee",
-            borderRadius: 8,
-            padding: 16,
-          }}
-        >
-          {post.content}
-        </article>
+        {/* Content */}
+        <article className={styles.content}>{post.content}</article>
 
-        {/* Optional image */}
-        <br />
-        {!!(post.photo || post.photoUrl) && (
-          <div>
-            <img
-              src={post.photo || post.photoUrl}
-              alt=""
-              style={{ maxWidth: "100%", borderRadius: 8 }}
-            />
-          </div>
-        )}
-        <br />
+        {/* Image */}
+        {post.photo && <img className={styles.image} src={post.photo} alt="" />}
 
-        {/* Owner-only actions */}
-        {isOwner && (
-          <div style={{ marginTop: 12, display: "flex", gap: 8, flexDirection: "column" }}>
-            {!isEditing ? (
-              <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  onClick={startEdit}
-                  style={{
-                    background: "#2563eb",
-                    color: "#fff",
-                    padding: "8px 12px",
-                    border: "none",
-                    borderRadius: 6,
-                  }}
-                >
-                  Edit Post
-                </button>
-                <button
-                  onClick={handleDelete}
-                  style={{
-                    background: "#e53e3e",
-                    color: "#fff",
-                    padding: "8px 12px",
-                    border: "none",
-                    borderRadius: 6,
-                  }}
-                >
-                  Delete Post
-                </button>
-              </div>
-            ) : (
-              <div style={{ marginTop: 12, width: "100%" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <input
-                    name="title"
-                    value={form.title}
-                    onChange={onChange}
-                    placeholder="Title"
-                    style={{ padding: 8, fontSize: 16 }}
-                  />
-                  {errors.title && <div style={{ color: "red" }}>{errors.title}</div>}
+        {/* Actions (owner vs non-owner) */}
+        <div className={styles.actionsBlock}>
+          {isOwner ? (
+            <>
+              {!isEditing ? (
+                <div className={styles.actionsRow}>
+                  <button onClick={startEdit} className={`${styles.btn} ${styles.btnPrimary}`}>
+                    Edit Post
+                  </button>
+                  <button onClick={handleDelete} className={`${styles.btn} ${styles.btnDanger}`}>
+                    Delete Post
+                  </button>
+                </div>
+              ) : (
+                <div className={styles.editWrap}>
+                  <div className={styles.editForm}>
+                    <input
+                      name="title"
+                      value={form.title}
+                      onChange={onChange}
+                      placeholder="Title"
+                      className={styles.input}
+                    />
+                    {errors.title && <div className={styles.error}>{errors.title}</div>}
 
-                  <textarea
-                    name="content"
-                    value={form.content}
-                    onChange={onChange}
-                    rows={8}
-                    placeholder="Content"
-                    style={{ padding: 8 }}
-                  />
-                  {errors.content && <div style={{ color: "red" }}>{errors.content}</div>}
+                    <textarea
+                      name="content"
+                      value={form.content}
+                      onChange={onChange}
+                      rows={8}
+                      placeholder="Content"
+                      className={styles.textarea}
+                    />
+                    {errors.content && <div className={styles.error}>{errors.content}</div>}
 
-                  {/* Image upload for edit */}
-                  <Row className={st.imageUploadSection}>
-                    <Col md={3}>
-                      <label htmlFor="imageUpload">Add Photo (Optional):</label>
-                    </Col>
-                    <Col md={9}>
-                      <input
-                        type="file"
-                        id="imageUpload"
-                        accept="image/*"
-                        onChange={handleImageChange}
-                        style={{ margin: "10px 0", display: "block" }}
-                      />
-                      {selectedImage && (
-                        <div
-                          style={{
-                            marginTop: "10px",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "10px",
-                          }}
-                        >
-                          <span
-                            style={{
-                              color: "#28a745",
-                              fontSize: "14px",
-                              fontWeight: "500",
-                            }}
-                          >
-                            ✓ {selectedImage.name}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={removeImage}
-                            style={{
-                              background: "#dc3545",
-                              color: "white",
-                              border: "none",
-                              borderRadius: "4px",
-                              padding: "4px 8px",
-                              fontSize: "12px",
-                              cursor: "pointer",
-                            }}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      )}
-                    </Col>
-                  </Row>
+                    {/* Image upload for edit */}
+                    <Row className={styles.imageUploadSection}>
+                      <Col md={3}>
+                        <label htmlFor="imageUpload" className={styles.label}>
+                          Add Photo (Optional):
+                        </label>
+                      </Col>
+                      <Col md={9}>
+                        <input
+                          type="file"
+                          id="imageUpload"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          className={styles.file}
+                        />
+                        {selectedImage && (
+                          <div className={styles.selectedFile}>
+                            <span className={styles.selectedName}>✓ {selectedImage.name}</span>
+                            <button
+                              type="button"
+                              onClick={removeImage}
+                              className={`${styles.btn} ${styles.btnRemove}`}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )}
+                      </Col>
+                    </Row>
 
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button
-                      onClick={saveEdit}
-                      style={{
-                        background: "#10b981",
-                        color: "#fff",
-                        padding: "8px 12px",
-                        border: "none",
-                        borderRadius: 6,
-                      }}
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={cancelEdit}
-                      style={{
-                        background: "#6b7280",
-                        color: "#fff",
-                        padding: "8px 12px",
-                        border: "none",
-                        borderRadius: 6,
-                      }}
-                    >
-                      Cancel
-                    </button>
+                    <div className={styles.actionsRow}>
+                      <button onClick={saveEdit} className={`${styles.btn} ${styles.btnSuccess}`}>
+                        Save
+                      </button>
+                      <button onClick={cancelEdit} className={`${styles.btn} ${styles.btnGrey}`}>
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </>
+          ) : (
+            <button
+              onClick={toggleRepost}
+              className={`${styles.btn} ${isReposted ? styles.btnRepostOn : styles.btnRepostOff}`}
+              disabled={repostWorking}
+              aria-label="Repost"
+              aria-pressed={isReposted}
+            >
+              {isReposted ? "Reposted" : "Repost"} • {repostCount}
+            </button>
+          )}
+        </div>
 
         {/* Comments */}
-        <hr style={{ margin: "40px 0", borderTop: "1px solid #ddd" }} />
-        <section className="comments-section">
-          <h2 style={{ marginBottom: 20 }}>Comments</h2>
+        <hr className={styles.hr} />
+        <section className={styles.comments}>
+          <h2 className={styles.commentsTitle}>Comments</h2>
           {postId && <CommentSection postId={postId} />}
         </section>
       </div>
@@ -478,16 +526,32 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   );
 }
 
-/**
- * SSR: fetch post detail for the given postId param.
- * Returns notFound flag if API returns non-OK.
- */
+// SSR: hydrate post details on first load
 export async function getServerSideProps({ params, req }) {
   const base = `http://${req?.headers?.host || "localhost:3000"}`;
   try {
     const r = await fetch(`${base}/api/posts/${params.postId}`);
     if (!r.ok) return { props: { notFound: true } };
     const post = await r.json();
+
+    // If this post is a repost, try to fetch minimal info about the original post
+    if (post?.repostOf) {
+      try {
+        const r2 = await fetch(`${base}/api/posts/${post.repostOf}`);
+        if (r2.ok) {
+          const original = await r2.json();
+          // Attach minimal info to render a link/badge
+          post.original = {
+            id: original?.id || original?._id,
+            title: original?.title || "Original post",
+            authorId: original?.authorId || null,
+          };
+        }
+      } catch {
+        // ignore fetch error; badge will still show without link
+      }
+    }
+
     return { props: { post, postIdFromProps: params.postId } };
   } catch {
     return { props: { notFound: true } };

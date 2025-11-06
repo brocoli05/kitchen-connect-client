@@ -1,0 +1,248 @@
+/* Container & layout */
+.container {
+    max-width: 820px;
+    margin: 72px auto;
+    padding: 0 16px;
+  }
+  
+  .fallback {
+    padding: 24px;
+  }
+  
+  /* Back link */
+  .backLink {
+    display: inline-block;
+    margin-bottom: 8px;
+    color: #111827;
+    text-decoration: none;
+    border: 1px solid #e5e7eb;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: #fff;
+  }
+  
+  /* Title */
+  .title {
+    margin: 16px 0 8px;
+    font-size: 28px;
+    font-weight: 700;
+  }
+  
+  /* Meta badges */
+  .metaBadges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 8px 0 12px;
+  }
+  
+  .badge {
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    border-radius: 9999px;
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+  
+  /* Header row (date + right-side actions) */
+  .headerRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 12px;
+  }
+  
+  .createdAt {
+    color: #666;
+    margin: 0;
+  }
+  
+  .actionsRight {
+    display: flex;
+    gap: 8px;
+  }
+  
+  /* Buttons - base */
+  .btn {
+    padding: 8px 16px;
+    font-size: 16px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  
+  /* Like button variants */
+  .btnLikeOn {
+    background: #dc2626;
+    color: #fff;
+  }
+  
+  .btnLikeOff {
+    background: #fff;
+    color: #333;
+  }
+  
+  /* Save button variants */
+  .btnSavedOn {
+    background: #333;
+    color: #fff;
+    font-weight: 700;
+  }
+  
+  .btnSavedOff {
+    background: #fff;
+    color: #333;
+  }
+  
+  /* Repost button variants */
+  .btnRepostOn {
+    background: #333;
+    color: #fff;
+  }
+  
+  .btnRepostOff {
+    background: #fff;
+    color: #333;
+  }
+  
+  /* Generic variants */
+  .btnPrimary {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+  }
+  
+  .btnDanger {
+    background: #e53e3e;
+    color: #fff;
+    border: none;
+  }
+  
+  .btnSuccess {
+    background: #10b981;
+    color: #fff;
+    border: none;
+  }
+  
+  .btnGrey {
+    background: #6b7280;
+    color: #fff;
+    border: none;
+  }
+  
+  .btnRemove {
+    background: #dc3545;
+    color: #fff;
+    border: none;
+  }
+  
+  /* Heart icon spacing */
+  .heart {
+    margin-right: 6px;
+  }
+  
+  /* Post content */
+  .content {
+    white-space: pre-wrap;
+    line-height: 1.6;
+    background: #fafafa;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 8px;
+  }
+  
+  /* Post image */
+  .image {
+    max-width: 100%;
+    border-radius: 8px;
+    display: block;
+    margin: 16px 0 0 0;
+  }
+  
+  /* Actions block & rows */
+  .actionsBlock {
+    margin-top: 12px;
+  }
+  
+  .actionsRow {
+    display: flex;
+    gap: 8px;
+  }
+  
+  /* Edit wrapper & form */
+  .editWrap {
+    margin-top: 12px;
+    width: 100%;
+  }
+  
+  .editForm {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  /* Inputs */
+  .input {
+    padding: 8px;
+    font-size: 16px;
+  }
+  
+  .textarea {
+    padding: 8px;
+    font-family: inherit;
+  }
+  
+  /* Errors */
+  .error {
+    color: #dc2626;
+    font-size: 14px;
+  }
+  
+  /* Image upload section */
+  .imageUploadSection {
+    margin: 6px 0 2px;
+  }
+  
+  .label {
+    display: inline-block;
+    margin-top: 6px;
+  }
+  
+  .file {
+    margin: 10px 0;
+    display: block;
+  }
+  
+  /* Selected file row */
+  .selectedFile {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .selectedName {
+    color: #28a745;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  
+  /* Comments */
+  .hr {
+    margin: 40px 0;
+    border: 0;
+    border-top: 1px solid #ddd;
+  }
+  
+  .comments {
+    margin-top: 8px;
+  }
+  
+  .commentsTitle {
+    margin-bottom: 20px;
+  }

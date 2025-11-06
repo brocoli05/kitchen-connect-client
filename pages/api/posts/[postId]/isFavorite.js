@@ -1,53 +1,34 @@
-// pages/api/posts/postId/isFavorite
-// PURPOSE: check to see if the logged in user has saved that specific post
-
-import jwt from "jsonwebtoken";
-import { ObjectId } from "mongodb";
+// pages/api/posts/[postId]/isFavorite.js
 import clientPromise from "@/lib/mongodb";
-import FavoritePosts from "@/pages/posts/favorite";
+import jwt from "jsonwebtoken";
 
-export default async function handler(req,res){
-    if(req.method !== 'GET'){
-      return res.status(405).json({message: "Method Not Allowed"});
-    }
+export default async function handler(req, res) {
+  if (req.method !== "GET") return res.status(405).end();
+  res.setHeader("Cache-Control", "no-store");
 
+  try {
+    // Token is optional: if no token, isFavorited = false
     const token = req.headers.authorization?.split(" ")[1];
-    if(!token){
-      return res.status(200).json({isFavorited : false});
+    if (!token) return res.status(200).json({ isFavorited: false });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = String(decoded.userId);
+    const { postId } = req.query;
+
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGODB_DB);
+
+    const fav = await db.collection("favorites").findOne({
+      userId,
+      postId: String(postId),
+    });
+
+    return res.status(200).json({ isFavorited: !!fav });
+  } catch (e) {
+    console.error("[GET /api/posts/:postId/isFavorite]", e);
+    if (e.name === "JsonWebTokenError" || e.name === "TokenExpiredError") {
+      return res.status(200).json({ isFavorited: false });
     }
-
-    try{
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const client = await clientPromise;
-      const db = client.db("kitchen-connect");
-      const userId = decoded.userId;
-      const {postId} = req.query;
-
-      if(!postId){
-        return res.status(400).json({message:"Post ID is required"});
-      }
-
-      const user = await db.collection("users").findOne(
-        {_id: new ObjectId(userId)},
-        {projection: {favoritePosts: 1}}
-      );
-
-      let isFavorited = false;
-      if (user && user.FavoritePosts && Array.isArray(user.favoritePosts)){
-        const postObjectId = new ObjectId(postId);
-        isFavorited = user.FavoritePosts.some((favId)=>favId.equals(postObjectId));
-      }
-      return res.status(200).json({isFavorited});
-    }
-    catch(error){
-    if (
-      error.name === "JsonWebTokenError" ||
-      error.name === "TokenExpiredError"
-    ) {
-        return res.status(200).json({isFavorited: false});
-    }
-
-    console.error("isFavorite API error: ", error);
-    res.status(500).json({ message: "Internal Server Error" });
-    }
+    return res.status(500).json({ isFavorited: false });
+  }
 }
