@@ -103,18 +103,16 @@ export default async function handler(req, res) {
         );
       }
     }
-
-    // If you store as arrays (e.g., ingredients: ["chicken", "egg"]), prefer:
     // if (include) filter.ingredients = { $elemMatch: { $regex: rx(include) } };
     // if (exclude) filter.ingredients = { $not: { $elemMatch: { $regex: rx(exclude) } } };
 
     // ---- Sorting ----
-    // "relevance" is a no-op here unless you use $text with a text index.
+    // "relevance" is a no-op here unless uses $text with a text index.
     // Fallbacks: newest or most liked.
     let sortOption = {};
     if (sort === "newest") sortOption = { createdAt: -1 };
     else if (sort === "liked") sortOption = { likeCount: -1 };
-    // else keep {} so Mongo returns insertion order (or you can default to {createdAt: -1})
+    // else keep {} so Mongo returns insertion order 
 
     // Debug (optional): see filter actually sent to Mongo
     // console.log("[/api/posts] filter:", JSON.stringify(filter));
