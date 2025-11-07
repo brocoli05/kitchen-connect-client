@@ -66,7 +66,20 @@ export default function ChatWidget({ contextId = null }) {
           </div>
 
           <div className={styles.messages} ref={msgRef}>
-            {messages.length === 0 && <div className={styles.hint}>Ask something about food or recipes — e.g. "How to make this vegan?"</div>}
+            {messages.length === 0 && (
+              <div className={styles.hint}>
+                <strong>Try asking:</strong>
+                <ul>
+                  <li>Ask for nutrient contents like "vitamin a in 2 carrots" or "calories in 1 cup of butter"</li>
+                  <li>Convert something with "2 cups of butter in grams"</li>
+                  <li>Find food substitutes by saying "what is a substitute for flour"</li>
+                  <li>Thirsty? Ask for wine pairings like "which wine goes well with spaghetti carbonara"</li>
+                  <li>If you want more results, just say "more"</li>
+                  <li>For more similar results say "more like the first/second/third..."</li>
+                  <li>Want to learn some food trivia, just say "food trivia"</li>
+                </ul>
+              </div>
+            )}
             {messages.map((m, i) => (
               <div key={i} className={m.from === "user" ? styles.msgUser : styles.msgBot}>
                 {m.text}
