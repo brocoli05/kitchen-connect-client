@@ -223,6 +223,46 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
     checkFavorite();
   }, [postIdFromProps]);
 
+  // Record a 'view' activity for this post in the user's history.
+  // Prevent duplicate records when navigating back/forward by
+  // remembering viewed posts in sessionStorage for the browser session.
+  useEffect(() => {
+    const recordView = async () => {
+      if (typeof window === "undefined") return;
+
+      // Only send once per browser session for this postId
+      const sessionKey = `viewed_post_${postIdFromProps}`;
+      try {
+        if (sessionStorage.getItem(sessionKey)) return;
+      } catch (e) {
+        // sessionStorage might be unavailable in some environments; swallow
+      }
+
+      const token = localStorage.getItem("userToken");
+      if (!token) return;
+
+      try {
+        await api.post("/users/history", {
+          type: "view",
+          postId: postIdFromProps,
+          title: post.title || null,
+        });
+
+        // mark as recorded for this session so back-button won't re-send
+        try {
+          sessionStorage.setItem(sessionKey, String(Date.now()));
+        } catch (e) {
+          // ignore storage errors
+        }
+      } catch (e) {
+        // don't block page load if recording fails
+        console.error("Failed to record view history", e);
+      }
+    };
+
+    if (router.isReady) recordView();
+  }, [postIdFromProps, post.title, router.isReady]);
+
   const handleSaveButton = async () => {
     const token = localStorage.getItem("userToken");
     if (!token) {

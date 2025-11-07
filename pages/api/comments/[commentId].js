@@ -60,10 +60,69 @@ export default async function handler(req, res) {
           { _id: commentObjectId },
           { $set: { text, updatedAt: new Date() } }
         );
+      // Track user's edited comment to history
+      try {
+        const post = await db.collection("posts").findOne({ _id: comment.postId }, { projection: { title: 1 } });
+        const title = post?.title || null;
+        await db.collection("users").updateOne(
+          { _id: comment.userId },
+          {
+            $push: {
+              history: {
+                $each: [
+                  {
+                    type: "comment_edited",
+                    postId: comment.postId,
+                    commentId: commentObjectId,
+                    text: text,
+                    title,
+                    createdAt: new Date(),
+                  },
+                ],
+                $position: 0,
+                $slice: 200,
+              },
+            },
+          }
+        );
+      } catch (e) {
+        console.error("Failed to record comment edit in history", e);
+      }
+
       res.status(200).json({ message: "Comment updated successfully." });
     } else if (req.method === "DELETE") {
       // --- Delete (DELETE) ---
       await db.collection("comments").deleteOne({ _id: commentObjectId });
+      
+      // Track user's delete comment to history
+      try {
+        const post = await db.collection("posts").findOne({ _id: comment.postId }, { projection: { title: 1 } });
+        const title = post?.title || null;
+        await db.collection("users").updateOne(
+          { _id: comment.userId },
+          {
+            $push: {
+              history: {
+                $each: [
+                  {
+                    type: "comment_deleted",
+                    postId: comment.postId,
+                    commentId: commentObjectId,
+                    text: comment.text || null,
+                    title,
+                    createdAt: new Date(),
+                  },
+                ],
+                $position: 0,
+                $slice: 200,
+              },
+            },
+          }
+        );
+      } catch (e) {
+        console.error("Failed to record comment deletion in history", e);
+      }
+
       res.status(200).json({ message: "Comment deleted successfully." });
     } else {
       res.status(405).json({

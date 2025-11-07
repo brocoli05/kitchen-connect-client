@@ -44,6 +44,59 @@ export default async function handler(req,res){
       }
 
       const result = await db.collection("users").updateOne({_id: userObjectId}, update);
+      // Track user's adding to favorites action in history
+      try {
+        const postDoc = await db.collection("posts").findOne({ _id: postObjectId }, { projection: { title: 1 } });
+        const title = postDoc?.title || null;
+
+        if (isFavNow) {
+          await db.collection("users").updateOne(
+            { _id: userObjectId },
+            {
+              $push: {
+                history: {
+                  $each: [
+                    {
+                      type: "favorite",
+                      postId: postObjectId,
+                      text: null,
+                      title,
+                      createdAt: new Date(),
+                    },
+                  ],
+                  $position: 0,
+                  $slice: 200,
+                },
+              },
+            }
+          );
+        } else {
+          // Track user's removing from favorites action in history
+          await db.collection("users").updateOne(
+            { _id: userObjectId },
+            {
+              $push: {
+                history: {
+                  $each: [
+                    {
+                      type: "unsaved",
+                      postId: postObjectId,
+                      text: null,
+                      title,
+                      createdAt: new Date(),
+                    },
+                  ],
+                  $position: 0,
+                  $slice: 200,
+                },
+              },
+            }
+          );
+        }
+      } catch (e) {
+        console.error("Failed to record favorite/unsave in history", e);
+      }
+
       res.status(200).json({isFavorited: isFavNow, message: isFavNow ? "Post Saved" : "Post Unsaved"});
     }catch(error){
       if (
