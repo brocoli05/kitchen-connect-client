@@ -60,10 +60,18 @@ export default async function handler(req, res) {
           { _id: commentObjectId },
           { $set: { text, updatedAt: new Date() } }
         );
-      // Track user's edited comment to history
-      try {
+  try {
         const post = await db.collection("posts").findOne({ _id: comment.postId }, { projection: { title: 1 } });
         const title = post?.title || null;
+        try {
+          const u = await db.collection("users").findOne({ _id: comment.userId }, { projection: { history: 1 } });
+          if (!Array.isArray(u?.history)) {
+            await db.collection("users").updateOne({ _id: comment.userId }, { $set: { history: [] } });
+          }
+        } catch (e) {
+          console.warn("Failed to ensure history array before comment edit push", e);
+        }
+
         await db.collection("users").updateOne(
           { _id: comment.userId },
           {
@@ -94,10 +102,18 @@ export default async function handler(req, res) {
       // --- Delete (DELETE) ---
       await db.collection("comments").deleteOne({ _id: commentObjectId });
       
-      // Track user's delete comment to history
       try {
         const post = await db.collection("posts").findOne({ _id: comment.postId }, { projection: { title: 1 } });
         const title = post?.title || null;
+        try {
+          const u = await db.collection("users").findOne({ _id: comment.userId }, { projection: { history: 1 } });
+          if (!Array.isArray(u?.history)) {
+            await db.collection("users").updateOne({ _id: comment.userId }, { $set: { history: [] } });
+          }
+        } catch (e) {
+          console.warn("Failed to ensure history array before comment delete push", e);
+        }
+
         await db.collection("users").updateOne(
           { _id: comment.userId },
           {

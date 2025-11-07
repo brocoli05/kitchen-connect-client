@@ -44,7 +44,14 @@ export default async function handler(req,res){
       }
 
       const result = await db.collection("users").updateOne({_id: userObjectId}, update);
-      // Track user's adding to favorites action in history
+      try {
+        const u = await db.collection("users").findOne({ _id: userObjectId }, { projection: { history: 1 } });
+        if (!Array.isArray(u?.history)) {
+          await db.collection("users").updateOne({ _id: userObjectId }, { $set: { history: [] } });
+        }
+      } catch (e) {
+        console.warn("Failed to ensure history array before favorite push", e);
+      }
       try {
         const postDoc = await db.collection("posts").findOne({ _id: postObjectId }, { projection: { title: 1 } });
         const title = postDoc?.title || null;
@@ -71,7 +78,6 @@ export default async function handler(req,res){
             }
           );
         } else {
-          // Track user's removing from favorites action in history
           await db.collection("users").updateOne(
             { _id: userObjectId },
             {

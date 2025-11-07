@@ -41,8 +41,7 @@ export default async function handler(req, res) {
       };
 
       await db.collection("comments").insertOne(newComment);
-      // Record the comment in the user's history array
-      try {
+  try {
         const inserted = await db.collection("comments").findOne({
           postId: newComment.postId,
           userId: newComment.userId,
@@ -62,6 +61,14 @@ export default async function handler(req, res) {
         }
 
         if (commentId) {
+          try {
+            const u = await db.collection("users").findOne({ _id: new ObjectId(authenticatedUserId) }, { projection: { history: 1 } });
+            if (!Array.isArray(u?.history)) {
+              await db.collection("users").updateOne({ _id: new ObjectId(authenticatedUserId) }, { $set: { history: [] } });
+            }
+          } catch (e) {
+            console.warn("Failed to ensure history array before comment push", e);
+          }
           await db.collection("users").updateOne(
             { _id: new ObjectId(authenticatedUserId) },
             {

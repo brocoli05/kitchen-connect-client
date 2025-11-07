@@ -57,6 +57,16 @@ export default async function handler(req, res) {
       // that could create duplicate entries when requests happen concurrently.
       const usersColl = db.collection("users");
 
+      try {
+        const me = await usersColl.findOne({ _id: userObjectId }, { projection: { history: 1 } });
+        if (!Array.isArray(me?.history)) {
+          await usersColl.updateOne({ _id: userObjectId }, { $set: { history: [] } });
+        }
+      } catch (e) {
+        
+        console.warn("Failed to ensure history array exists for user", e);
+      }
+
       // If title is not provided and type references a post, try to fetch title from posts
       if (!event.title) {
         try {
