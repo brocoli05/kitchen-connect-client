@@ -41,6 +41,60 @@ export default async function handler(req, res) {
       };
 
       await db.collection("comments").insertOne(newComment);
+  try {
+        const inserted = await db.collection("comments").findOne({
+          postId: newComment.postId,
+          userId: newComment.userId,
+          text: newComment.text,
+          createdAt: newComment.createdAt,
+        });
+
+        const commentId = inserted?._id || null;
+
+        // Try to fetch post title for storing in history
+        let postTitle = null;
+        try {
+          const post = await db.collection("posts").findOne({ _id: new ObjectId(postId) }, { projection: { title: 1 } });
+          if (post && post.title) postTitle = post.title;
+        } catch (e) {
+          // ignore
+        }
+
+        if (commentId) {
+          try {
+            const u = await db.collection("users").findOne({ _id: new ObjectId(authenticatedUserId) }, { projection: { history: 1 } });
+            if (!Array.isArray(u?.history)) {
+              await db.collection("users").updateOne({ _id: new ObjectId(authenticatedUserId) }, { $set: { history: [] } });
+            }
+          } catch (e) {
+            console.warn("Failed to ensure history array before comment push", e);
+          }
+          await db.collection("users").updateOne(
+            { _id: new ObjectId(authenticatedUserId) },
+            {
+              $push: {
+                history: {
+                  $each: [
+                    {
+                      type: "comment",
+                      postId: new ObjectId(postId),
+                      commentId: new ObjectId(commentId),
+                      text: text,
+                      title: postTitle,
+                      createdAt: new Date(),
+                    },
+                  ],
+                  $position: 0,
+                  $slice: 200,
+                },
+              },
+            }
+          );
+        }
+      } catch (e) {
+        console.error("Failed to record comment in history", e);
+      }
+
       res.status(201).json({ message: "Comment successfully posted." });
     } catch (error) {
       console.error("Comment post error:", error);

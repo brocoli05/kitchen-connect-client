@@ -29,9 +29,19 @@ export default async function handler(req, res) {
       const favoritesIds = user.favoritePosts.map((id)=> new ObjectId(id));
       const posts = await db.collection("posts").find({_id: {$in: favoritesIds}}).toArray();
       res.status(200).json(posts);
-    }
-    catch(error){
-        console.error("Favorite Posts Error", error);
-        res.status(500).json({message: "Internal Server Error"})
+    } catch (error) {
+      // Handle expired or invalid tokens explicitly so the client can react (e.g. re-authenticate)
+      if (error.name === "TokenExpiredError") {
+        console.error("Favorite Posts Error - token expired", { expiredAt: error.expiredAt });
+        return res.status(401).json({ message: "Token expired" });
+      }
+
+      if (error.name === "JsonWebTokenError") {
+        console.error("Favorite Posts Error - invalid token", error);
+        return res.status(401).json({ message: "Invalid token" });
+      }
+
+      console.error("Favorite Posts Error", error);
+      res.status(500).json({ message: "Internal Server Error" });
     }
 }
