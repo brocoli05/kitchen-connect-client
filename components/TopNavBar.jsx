@@ -58,7 +58,7 @@ export default function TopNavBar({}) {
           >
             Favorites
           </button>
-          <button
+          {/* <button
             onClick={() => router.push("/share")}
             className="me-3 rounded-3 d-flex align-items-center justify-content-center btn btn-link fw-bold"
             style={{
@@ -72,7 +72,7 @@ export default function TopNavBar({}) {
             type="button"
           >
             Share
-          </button>
+          </button> */}
           <button
             onClick={() => router.push("/profile/edit")}
             className=" d-flex align-items-center h-100 justify-content-center btn btn-link"
