@@ -54,7 +54,8 @@ export default function HistoryPage() {
               width: 420,
               borderRadius: 8,
               backgroundColor: "transparent",
-              color: "#000000ff'",
+              color: "#000",
+              caretColor: "#000",
             }}
           />
 
