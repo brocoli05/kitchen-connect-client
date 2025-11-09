@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 
-const AuthForm = ({ type, onSubmit, isLoading, error }) => {
+const AuthForm = ({ type, onSubmit, isLoading, error, onGoogleLogin }) => {
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -21,7 +21,24 @@ const AuthForm = ({ type, onSubmit, isLoading, error }) => {
 
   return (
     <div className="auth-form-container">
-      <h2>{type === "register" ? "Register" : "Log in"}</h2>
+      <h2 style={{ color: "black" }}>
+        {type === "register" ? "Register" : "Log In"}
+      </h2>
+
+      {/* Google Login Button */}
+      {type === "login" && onGoogleLogin && (
+        <button
+          type="button"
+          onClick={onGoogleLogin}
+          disabled={isLoading}
+          className="btn btn-primary"
+        >
+          Continue with Google
+        </button>
+      )}
+      <div style={{ textAlign: "center", margin: "20px 0", color: "#666" }}>
+        OR
+      </div>
       <form onSubmit={handleSubmit} className="auth-form">
         {type === "register" && (
           <div className="form-group">
@@ -79,12 +96,12 @@ const AuthForm = ({ type, onSubmit, isLoading, error }) => {
             ? "Loading..."
             : type === "register"
             ? "Register"
-            : "Log in"}
+            : "Sign In"}
         </button>
       </form>
       {type === "register" && (
         <p className="form-switch-text">
-          Already have an account? <Link href="/login">Login</Link>
+          Already have an account? <Link href="/login">Sign In</Link>
         </p>
       )}
       {type === "login" && (

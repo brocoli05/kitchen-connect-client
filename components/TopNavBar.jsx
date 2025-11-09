@@ -3,6 +3,8 @@ import { useRouter } from "next/router";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import { Dropdown } from "react-bootstrap";
+import { signOut } from "next-auth/react";
+
 export default function TopNavBar({}) {
   const router = useRouter();
 
@@ -16,6 +18,8 @@ export default function TopNavBar({}) {
           Authorization: `Bearer ${token}`,
         },
       });
+
+      await signOut({ redirect: false });
 
       localStorage.removeItem("userToken");
 
