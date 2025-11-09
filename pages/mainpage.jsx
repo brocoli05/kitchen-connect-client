@@ -32,11 +32,14 @@ function ToggleList({ title }) {
             <a href="#/action-1">Notifications</a>
           </li>
           <li>
-            <a href="#/action-2">Saved</a>
+            <a href="/posts/favorite">Favorites</a>
           </li>
           <li>
             <a href="#/action-3">Lists</a>
           </li>
+              <li>
+                <a href="/history">History</a>
+              </li>
         </ul>
       )}
       {open && title === "Kitchen" && (

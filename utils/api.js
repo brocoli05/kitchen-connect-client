@@ -2,7 +2,6 @@
 
 import axios from "axios";
 
-// Use a relative path to point to the Next.js API routes on the same server.
 const API_BASE_URL = "/api";
 
 const api = axios.create({
@@ -15,7 +14,7 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("userToken");
+      const token = localStorage.getItem("userToken") || localStorage.getItem("token");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
         delete config.headers["x-auth-token"];
@@ -23,7 +22,21 @@ api.interceptors.request.use(
     }
     return config;
   },
+  (error) => Promise.reject(error)
+);
+
+api.interceptors.response.use(
+  (response) => response,
   (error) => {
+    if (typeof window !== "undefined" && error?.response?.status === 401) {
+      try {
+        localStorage.removeItem("userToken");
+        localStorage.removeItem("userInfo");
+      } catch (e) {
+        // ignore
+      }
+      window.location.href = "/login";
+    }
     return Promise.reject(error);
   }
 );

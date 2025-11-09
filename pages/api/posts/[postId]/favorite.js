@@ -44,6 +44,65 @@ export default async function handler(req,res){
       }
 
       const result = await db.collection("users").updateOne({_id: userObjectId}, update);
+      try {
+        const u = await db.collection("users").findOne({ _id: userObjectId }, { projection: { history: 1 } });
+        if (!Array.isArray(u?.history)) {
+          await db.collection("users").updateOne({ _id: userObjectId }, { $set: { history: [] } });
+        }
+      } catch (e) {
+        console.warn("Failed to ensure history array before favorite push", e);
+      }
+      try {
+        const postDoc = await db.collection("posts").findOne({ _id: postObjectId }, { projection: { title: 1 } });
+        const title = postDoc?.title || null;
+
+        if (isFavNow) {
+          await db.collection("users").updateOne(
+            { _id: userObjectId },
+            {
+              $push: {
+                history: {
+                  $each: [
+                    {
+                      type: "favorite",
+                      postId: postObjectId,
+                      text: null,
+                      title,
+                      createdAt: new Date(),
+                    },
+                  ],
+                  $position: 0,
+                  $slice: 200,
+                },
+              },
+            }
+          );
+        } else {
+          await db.collection("users").updateOne(
+            { _id: userObjectId },
+            {
+              $push: {
+                history: {
+                  $each: [
+                    {
+                      type: "unsaved",
+                      postId: postObjectId,
+                      text: null,
+                      title,
+                      createdAt: new Date(),
+                    },
+                  ],
+                  $position: 0,
+                  $slice: 200,
+                },
+              },
+            }
+          );
+        }
+      } catch (e) {
+        console.error("Failed to record favorite/unsave in history", e);
+      }
+
       res.status(200).json({isFavorited: isFavNow, message: isFavNow ? "Post Saved" : "Post Unsaved"});
     }catch(error){
       if (

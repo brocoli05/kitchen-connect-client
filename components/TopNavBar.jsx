@@ -3,30 +3,34 @@ import { useRouter } from "next/router";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import { Dropdown } from "react-bootstrap";
+import { signOut } from "next-auth/react";
+
 export default function TopNavBar({}) {
   const router = useRouter();
 
   const handleLogout = async () => {
-  try {
-    const token = localStorage.getItem("userToken");
-    
-    await fetch('/api/users/logout', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    localStorage.removeItem("userToken");
-    
-    router.push("/login");
-  } catch (error) {
-    console.error("Logout error:", error);
-    // Still logout even if API fails
-    localStorage.removeItem("userToken");
-    router.push("/login");
-  }
-};
+    try {
+      const token = localStorage.getItem("userToken");
+
+      await fetch("/api/users/logout", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      await signOut({ redirect: false });
+
+      localStorage.removeItem("userToken");
+
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Still logout even if API fails
+      localStorage.removeItem("userToken");
+      router.push("/login");
+    }
+  };
   return (
     <div>
       <Row className="m-3 d-flex align-items-center topnav">
@@ -42,19 +46,19 @@ export default function TopNavBar({}) {
           <button
             onClick={() => router.push("/posts/favorite")}
             className="me-3 rounded-3 d-flex align-items-center justify-content-center btn btn-link fw-bold"
-              style={{
-                textDecoration: "none",
-                color: "#FFFFFF",
-                backgroundColor: "#000000ff",
-                border: "none",
-                height: "35px",
-                width: "86px",
-              }}
+            style={{
+              textDecoration: "none",
+              color: "#FFFFFF",
+              backgroundColor: "#000000ff",
+              border: "none",
+              height: "35px",
+              width: "86px",
+            }}
             type="button"
-            >
-              Favorites
+          >
+            Favorites
           </button>
-          <button
+          {/* <button
             onClick={() => router.push("/share")}
             className="me-3 rounded-3 d-flex align-items-center justify-content-center btn btn-link fw-bold"
             style={{
@@ -68,7 +72,7 @@ export default function TopNavBar({}) {
             type="button"
           >
             Share
-          </button>
+          </button> */}
           <button
             onClick={() => router.push("/profile/edit")}
             className=" d-flex align-items-center h-100 justify-content-center btn btn-link"
@@ -98,9 +102,7 @@ export default function TopNavBar({}) {
               <Dropdown.Item onClick={() => router.push("/profile/edit")}>
                 Settings…
               </Dropdown.Item>
-              <Dropdown.Item onClick={handleLogout}>
-                Logout
-              </Dropdown.Item>
+              <Dropdown.Item onClick={handleLogout}>Logout</Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
         </Col>

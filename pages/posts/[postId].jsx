@@ -7,6 +7,40 @@ import api from "../../utils/api";
 import TopNavBar from "@/components/TopNavBar";
 import { Row, Col } from "react-bootstrap";
 import st from "@/styles/createPost.module.css";
+import Head from "next/head";
+
+// Social Media Share URL Helper
+const getSocialShareUrls = (title, url) => {
+  const encodedTitle = encodeURIComponent(title);
+  const encodedUrl = encodeURIComponent(url);
+
+  return {
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedTitle}`,
+    twitter: `https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`,
+    instagram: `https://www.instagram.com/`,
+  };
+};
+
+// Web Share API implementation
+const sharePost = async (title, url, onFallbackNeeded) => {
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: title,
+        url: url,
+      });
+      console.log("Post shared successfully via Web Share API");
+    } catch (error) {
+      // Check for AbortError (user cancelled)
+      if (error.name !== "AbortError") {
+        console.error("Error sharing:", error);
+      }
+    }
+  } else {
+    // If Web Share API is not supported, trigger fallback UI
+    onFallbackNeeded();
+  }
+};
 
 export default function PostPage({ post, notFound, postIdFromProps }) {
   const postId = post?.id;
@@ -22,6 +56,12 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   const [errors, setErrors] = useState({});
   const [isFavorited, setIsFavorited] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [showShareOptions, setShowShareOptions] = useState(false);
+  const currentUrl =
+    typeof window !== "undefined"
+      ? window.location.href
+      : `https://kitchen-connect-client.vercel.app/posts/${postIdFromProps}`;
+  const shareUrls = getSocialShareUrls(post.title, currentUrl);
 
   useEffect(() => {
     const token =
@@ -223,6 +263,46 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
     checkFavorite();
   }, [postIdFromProps]);
 
+  // Record a 'view' activity for this post in the user's history.
+  // Prevent duplicate records when navigating back/forward by
+  // remembering viewed posts in sessionStorage for the browser session.
+  useEffect(() => {
+    const recordView = async () => {
+      if (typeof window === "undefined") return;
+
+      // Only send once per browser session for this postId
+      const sessionKey = `viewed_post_${postIdFromProps}`;
+      try {
+        if (sessionStorage.getItem(sessionKey)) return;
+      } catch (e) {
+        // sessionStorage might be unavailable in some environments; swallow
+      }
+
+      const token = localStorage.getItem("userToken");
+      if (!token) return;
+
+      try {
+        await api.post("/users/history", {
+          type: "view",
+          postId: postIdFromProps,
+          title: post.title || null,
+        });
+
+        // mark as recorded for this session so back-button won't re-send
+        try {
+          sessionStorage.setItem(sessionKey, String(Date.now()));
+        } catch (e) {
+          // ignore storage errors
+        }
+      } catch (e) {
+        // don't block page load if recording fails
+        console.error("Failed to record view history", e);
+      }
+    };
+
+    if (router.isReady) recordView();
+  }, [postIdFromProps, post.title, router.isReady]);
+
   const handleSaveButton = async () => {
     const token = localStorage.getItem("userToken");
     if (!token) {
@@ -241,6 +321,26 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
 
   return (
     <>
+      <Head>
+        <title>{post.title}</title>
+        {/* Ensure your live domain is used here for absolute URLs */}
+        <meta property="og:title" content={post.title} />
+        <meta
+          property="og:description"
+          content={post.content.substring(0, 150) + "..."}
+        />
+        <meta property="og:url" content={currentUrl} />
+        {/* Replace YOUR_DEFAULT_IMAGE_URL with your absolute image path */}
+        <meta
+          property="og:image"
+          content={
+            post.photo ||
+            "https://kitchen-connect-client.vercel.app/images/default-recipe.png"
+          }
+        />
+        <meta property="og:type" content="article" />
+        <meta name="twitter:card" content="summary_large_image" />
+      </Head>
       <TopNavBar />
       <div style={{ maxWidth: 820, margin: "72px auto", padding: "0 16px" }}>
         <Link href="/">← Back</Link>
@@ -266,21 +366,126 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
                 hour12: true,
               })}
             </p>
-            <button
-              onClick={handleSaveButton}
-              style={{
-                padding: "8px 16px",
-                fontSize: 16,
-                border: "1px solid #333",
-                borderRadius: 4,
-                backgroundColor: isFavorited ? "#333" : "#fff",
-                color: isFavorited ? "#fff" : "#333",
-                cursor: "pointer",
-                fontWeight: isFavorited ? "bold" : "normal",
-              }}
-            >
-              {isFavorited ? "Saved" : "Save"}
-            </button>
+            <div style={{ display: "flex", gap: 8, position: "relative" }}>
+              {/* Save Button */}
+              <button
+                onClick={handleSaveButton}
+                style={{
+                  padding: "8px 16px",
+                  fontSize: 16,
+                  border: "1px solid #333",
+                  borderRadius: 4,
+                  backgroundColor: isFavorited ? "#333" : "#fff",
+                  color: isFavorited ? "#fff" : "#333",
+                  cursor: "pointer",
+                  fontWeight: isFavorited ? "bold" : "normal",
+                }}
+              >
+                {isFavorited ? "Saved" : "Save"}
+              </button>
+
+              {/* Share Button */}
+              <button
+                onClick={() => {
+                  // Try Web Share API first; fallback to popover
+                  sharePost(post.title, currentUrl, () =>
+                    setShowShareOptions(!showShareOptions)
+                  );
+                }}
+                style={{
+                  padding: "8px 16px",
+                  fontSize: 16,
+                  border: "1px solid #333",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  backgroundColor: "#fff",
+                }}
+              >
+                🔗 Share
+              </button>
+
+              {/* Share Options Popover */}
+              {showShareOptions && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    right: 0,
+                    zIndex: 10,
+                    border: "1px solid #ddd",
+                    backgroundColor: "white",
+                    padding: "10px",
+                    borderRadius: "4px",
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+                    minWidth: "150px",
+                  }}
+                >
+                  <a
+                    href={shareUrls.facebook}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowShareOptions(false)}
+                    style={{
+                      display: "block",
+                      padding: "5px 0",
+                      textDecoration: "none",
+                      color: "#3b5998",
+                    }}
+                  >
+                    📘 Share on <b>Facebook</b>
+                  </a>
+                  <a
+                    href={shareUrls.twitter}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowShareOptions(false)}
+                    style={{
+                      display: "block",
+                      padding: "5px 0",
+                      textDecoration: "none",
+                      color: "#1da1f2",
+                    }}
+                  >
+                    🐦 Share on <b>X (Twitter)</b>
+                  </a>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(currentUrl);
+                      alert(
+                        "🔗 Link copied! You can now paste it into your Instagram story or bio."
+                      );
+                      window.open(shareUrls.instagram, "_blank");
+                      setShowShareOptions(false);
+                    }}
+                    style={{
+                      all: "unset",
+                      display: "block",
+                      padding: "5px 0",
+                      cursor: "pointer",
+                      color: "#E4405F",
+                    }}
+                  >
+                    📸 Share on <b>Instagram</b>
+                  </button>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(currentUrl);
+                      alert("Link copied to clipboard!");
+                      setShowShareOptions(false);
+                    }}
+                    style={{
+                      all: "unset",
+                      display: "block",
+                      padding: "5px 0",
+                      cursor: "pointer",
+                      color: "#333",
+                    }}
+                  >
+                    📋 <b>Copy Link</b>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
