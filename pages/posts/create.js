@@ -5,6 +5,7 @@ import TopNavBar from "@/components/TopNavBar";
 import st from "@/styles/createPost.module.css";
 import api from "../../utils/api";
 import { Row, Col } from "react-bootstrap";
+import RecipeTitleInput from "@/components/RecipeTitleInput";
 
 export default function CreatePost() {
   const router = useRouter();
@@ -24,12 +25,16 @@ export default function CreatePost() {
     register,
     handleSubmit,
     formState: { errors },
+    setValue,
+    watch,
   } = useForm({
     defaultValues: {
       title: "",
       content: "",
     },
   });
+
+  const titleValue = watch("title");
 
   // When the post button is clicked
   const submitForm = async (data) => {
@@ -117,12 +122,64 @@ export default function CreatePost() {
       </p>
 
       <form onSubmit={handleSubmit(submitForm)} className={st.form}>
+        {/* Use RecipeTitleInput which queries the existing /api/recipe-autocomplete route */}
         Title: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
-        <textarea
-          className={`${st.title} ${errors.title ? "inputError" : ""}`}
+        <RecipeTitleInput
+          value={titleValue}
+          onSelect={async (selection) => {
+            // selection can be either a string (legacy) or an object { id, title }
+            if (!selection) return;
+            let title = typeof selection === 'string' ? selection : selection.title;
+            setValue("title", title);
+
+            // If we have an id, fetch full recipe details and populate content
+            const id = typeof selection === 'object' && selection.id ? selection.id : null;
+            if (id) {
+              try {
+                const res = await fetch(`/api/recipes/${encodeURIComponent(id)}`);
+                if (!res.ok) return;
+                const info = await res.json();
+
+                // Build content: Ingredients + Steps
+                const ingredients = (info.extendedIngredients || info.ingredients || []).map((ing) => {
+                  // Spoonacular extendedIngredients has amount, unit, name
+                  const amt = ing.amount || (ing.measures && ing.measures.us && ing.measures.us.amount) || '';
+                  const unit = ing.unit || (ing.measures && ing.measures.us && ing.measures.us.unitShort) || '';
+                  const name = ing.name || ing.original || '';
+                  return `- ${amt} ${unit} ${name}`.replace(/\s+/g, ' ').trim();
+                }).join('\n');
+
+                // instructions may be in analyzedInstructions (array of sections)
+                let steps = [];
+                if (Array.isArray(info.analyzedInstructions) && info.analyzedInstructions.length > 0) {
+                  info.analyzedInstructions.forEach((section) => {
+                    if (Array.isArray(section.steps)) {
+                      section.steps.forEach((s) => {
+                        if (s.step) steps.push(s.step);
+                        else if (s.description) steps.push(s.description);
+                      });
+                    }
+                  });
+                }
+                // fallback to plain instructions text
+                if (steps.length === 0 && info.instructions) {
+                  // split by line breaks or sentences heuristically
+                  steps = info.instructions.split(/\r?\n|(?<=\.)\s+/).filter(Boolean);
+                }
+
+                const stepsFormatted = steps.map((s, i) => `${i + 1}. ${s}`).join('\n\n');
+
+                const formatted = `Ingredients:\n${ingredients || 'N/A'}\n\nInstructions:\n${stepsFormatted || 'N/A'}`;
+                setValue('content', formatted);
+              } catch (err) {
+                console.error('Failed to fetch recipe details', err);
+              }
+            }
+          }}
           placeholder="Homemade Meat Lovers Pizza"
-          {...register("title", { required: true, maxLength: 35 })}
         />
+        {/* Hidden input is registered so react-hook-form still validates the title */}
+        <input type="hidden" {...register("title", { required: true, maxLength: 35 })} />
         {errors.title?.type === "required" && (
           <span className={`${st.titleError} inputErrorText`}>
             This field is required
