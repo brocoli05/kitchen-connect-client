@@ -1,6 +1,7 @@
 // pages/posts/[postId].jsx
 import Link from "next/link";
 import CommentSection from "@/components/CommentSection";
+import ChatWidget from "@/components/ChatWidget";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import api from "../../utils/api";
@@ -662,6 +663,8 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
           <h2 style={{ marginBottom: 20 }}>Comments</h2>
           {postId && <CommentSection postId={postId} />}
         </section>
+        {/* Chat widget (floating) */}
+        <ChatWidget contextId={postId} />
       </div>
     </>
   );

@@ -177,6 +177,7 @@ export default function CreatePost() {
             }
           }}
           placeholder="Homemade Meat Lovers Pizza"
+		  className="title"
         />
         {/* Hidden input is registered so react-hook-form still validates the title */}
         <input type="hidden" {...register("title", { required: true, maxLength: 35 })} />
