@@ -164,7 +164,12 @@ export default function CreatePost() {
                 // fallback to plain instructions text
                 if (steps.length === 0 && info.instructions) {
                   // split by line breaks or sentences heuristically
-                  steps = info.instructions.split(/\r?\n|(?<=\.)\s+/).filter(Boolean);
+                  // Note: Avoids lookbehind for compatibility with older JS environments.
+                  steps = info.instructions
+                    .split(/\r?\n|\. +/)
+                    .map(s => s.trim())
+                    .filter(Boolean)
+                    .map(s => s.endsWith('.') ? s : s + '.');
                 }
 
                 const stepsFormatted = steps.map((s, i) => `${i + 1}. ${s}`).join('\n\n');
