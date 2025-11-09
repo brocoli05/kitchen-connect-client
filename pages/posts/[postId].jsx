@@ -9,6 +9,8 @@ import TopNavBar from "@/components/TopNavBar";
 import { Row, Col } from "react-bootstrap";
 import st from "@/styles/createPost.module.css";
 
+const GEOLOCATION_TIMEOUT = 8000;
+
 export default function PostPage({ post, notFound, postIdFromProps }) {
   const postId = post?.id;
   const router = useRouter();
@@ -141,7 +143,7 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
           called.v = true;
           openUrl(); // fallback without coords
         }
-      }, 8000);
+      }, GEOLOCATION_TIMEOUT);
 
       navigator.geolocation.getCurrentPosition(
         (pos) => {
