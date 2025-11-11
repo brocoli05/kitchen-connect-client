@@ -65,9 +65,6 @@ export default function CreatePost() {
         // No image - use regular JSON approach
         const create = await api.post(
           "/posts/create",
-<<<<<<< Updated upstream
-          { title, content },
-=======
           {
             title,
             content,
@@ -77,7 +74,6 @@ export default function CreatePost() {
             includeIngredients: include,
             excludeIngredients: exclude,
           },
->>>>>>> Stashed changes
           { headers: { Authorization: `Bearer ${clientToken}` } }
         );
       }
