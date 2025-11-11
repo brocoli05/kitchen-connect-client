@@ -21,6 +21,14 @@ export default function CreatePost() {
     }
   }, [router]);
 
+
+
+  const [time, setTime] = useState("");
+  const [difficulty, setDifficulty] = useState("");
+  const [dietary, setDietary] = useState("");
+  const [include, setInclude] = useState("");
+  const [exclude, setExclude] = useState("");
+
   const {
     register,
     handleSubmit,
@@ -31,6 +39,11 @@ export default function CreatePost() {
     defaultValues: {
       title: "",
       content: "",
+      time: "",            
+      difficulty: "",      
+      dietary: "",         
+      include: "",         
+      exclude: "",         
     },
   });
 
@@ -49,6 +62,11 @@ export default function CreatePost() {
         formData.append('title', title);
         formData.append('content', content);
         formData.append('photo', selectedImage); // Send actual file
+        formData.append('timeMax', time);
+        formData.append('difficulty', difficulty);
+        formData.append('dietary', dietary);
+        formData.append('includeIngredients', include);
+        formData.append('excludeIngredients', exclude);
         
         const response = await fetch('/api/posts/create', {
           method: 'POST',
@@ -149,13 +167,28 @@ export default function CreatePost() {
                 const info = await res.json();
 
                 // Build content: Ingredients + Steps
-                const ingredients = (info.extendedIngredients || info.ingredients || []).map((ing) => {
-                  // Spoonacular extendedIngredients has amount, unit, name
-                  const amt = ing.amount || (ing.measures && ing.measures.us && ing.measures.us.amount) || '';
-                  const unit = ing.unit || (ing.measures && ing.measures.us && ing.measures.us.unitShort) || '';
-                  const name = ing.name || ing.original || '';
-                  return `- ${amt} ${unit} ${name}`.replace(/\s+/g, ' ').trim();
-                }).join('\n');
+                const ingredients = (
+                  info.extendedIngredients || info.ingredients || []
+                )
+                  .map((ing) => {
+                    const amt =
+                      ing.amount ||
+                      (ing.measures &&
+                        ing.measures.us &&
+                        ing.measures.us.amount) ||
+                      "";
+                    const unit =
+                      ing.unit ||
+                      (ing.measures &&
+                        ing.measures.us &&
+                        ing.measures.us.unitShort) ||
+                      "";
+                    const name = ing.name || ing.original || "";
+                    return `- ${amt} ${unit} ${name}`
+                      .replace(/\s+/g, " ")
+                      .trim();
+                  })
+                  .join("\n");
 
                 // instructions may be in analyzedInstructions (array of sections)
                 let steps = [];
@@ -169,6 +202,8 @@ export default function CreatePost() {
                     }
                   });
                 }
+
+                
                 // fallback to plain instructions text
                 if (steps.length === 0 && info.instructions) {
                   // split by line breaks or sentences heuristically
