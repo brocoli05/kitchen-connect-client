@@ -48,13 +48,13 @@ export default async function handler(req, res) {
       ];
     }
 
-    // Optional filters (only apply when present)
-    if (difficulty) filter.difficulty = difficulty;
-    if (dietary) filter.dietary = { $regex: rx(dietary) };
-    if (timeMax) filter.timeMax = { $lte: toInt(timeMax, 0) };
+    if (keywordOr.length) baseFilter.$and = [{ $or: keywordOr }];
 
-    if (include) filter.includeIngredients = { $regex: rx(include) };
-    if (exclude) filter.excludeIngredients = { $not: { $regex: rx(exclude) } };
+    if (difficulty) baseFilter.difficulty = difficulty;
+    if (dietary) baseFilter.dietary = { $regex: rx(dietary) };
+    if (timeMax) baseFilter.timeMax = { $lte: toInt(timeMax, 0) };
+    if (include) baseFilter.includeIngredients = { $regex: rx(include) };
+    if (exclude) baseFilter.excludeIngredients = { $not: { $regex: rx(exclude) } };
 
     // ---- Sorting ----
     const sortOption =
