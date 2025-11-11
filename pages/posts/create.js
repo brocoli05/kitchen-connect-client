@@ -11,6 +11,13 @@ export default function CreatePost() {
   const router = useRouter();
   const [selectedImage, setSelectedImage] = useState(null);
 
+
+   // New fields
+   const [difficulty, setDifficulty] = useState("");
+   const [dietary, setDietary] = useState("");
+   const [include, setInclude] = useState("");
+   const [exclude, setExclude] = useState("");
+
   // secure protection to make sure unauthenticated user can't come to the page
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -31,6 +38,10 @@ export default function CreatePost() {
     defaultValues: {
       title: "",
       content: "",
+      difficulty: "",
+      dietary: "",
+      include: "",
+      exclude: "",
     },
   });
 
@@ -38,7 +49,7 @@ export default function CreatePost() {
 
   // When the post button is clicked
   const submitForm = async (data) => {
-    const { title, content } = data;
+    const { title, content, difficulty, dietary, include, exclude } = data;
 
     try {
       const clientToken = localStorage.getItem("userToken");
@@ -49,6 +60,10 @@ export default function CreatePost() {
         formData.append('title', title);
         formData.append('content', content);
         formData.append('photo', selectedImage); // Send actual file
+        formData.append("difficulty", difficulty);
+        formData.append("dietary", dietary);
+        formData.append("include", include);
+        formData.append("exclude", exclude);
         
         const response = await fetch('/api/posts/create', {
           method: 'POST',
@@ -239,7 +254,53 @@ export default function CreatePost() {
             )}
           </Col>
         </Row>
-        
+        <Row>
+            <Col style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label>Difficulty</label>
+              <select
+                value={difficulty}
+                onChange={(e) => setDifficulty(e.target.value)}
+                className={st.input}
+              >
+                <option value="">Select difficulty</option>
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+                <option value="Hard">Hard</option>
+              </select>
+            </Col>
+            <Col style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label>Dietary</label>
+              <input
+                type="text"
+                value={dietary}
+                onChange={(e) => setDietary(e.target.value)}
+                placeholder="e.g., vegan, halal"
+                className={st.input}
+              />
+            </Col>
+          </Row>
+          <Row style={{ marginTop: "8px" }}>
+            <Col style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label>Include Ingredients</label>
+              <input
+                type="text"
+                value={include}
+                onChange={(e) => setInclude(e.target.value)}
+                placeholder="e.g., chicken, cheese"
+                className={st.input}
+              />
+            </Col>
+            <Col style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label>Exclude Ingredients</label>
+              <input
+                type="text"
+                value={exclude}
+                onChange={(e) => setExclude(e.target.value)}
+                placeholder="e.g., nuts, gluten"
+                className={st.input}
+              />
+            </Col>
+          </Row>
         <br />
         Content: &nbsp; &nbsp; &nbsp; &nbsp;
         <textarea
