@@ -13,6 +13,7 @@ export default function CreatePost() {
   const [selectedImage, setSelectedImage] = useState(null);
 
   // New fields
+  const [time, setTime] = useState("");
   const [difficulty, setDifficulty] = useState("");
   const [dietary, setDietary] = useState("");
   const [include, setInclude] = useState("");
@@ -85,7 +86,7 @@ export default function CreatePost() {
           {
             title,
             content,
-            timeMax: "30",
+            timeMax,
             difficulty,
             dietary,
             includeIngredients: include,
@@ -302,7 +303,23 @@ export default function CreatePost() {
             )}
           </Col>
         </Row>
+        
 
+        <Row style={{ marginTop: "8px" }}>
+        <Col style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <label>Cooking Time (minutes)</label>
+          <input
+            type="number"
+            min="0"
+            placeholder="e.g., 30"
+            value={time}
+            onChange={(e) => { setTime(e.target.value);
+              setValue("time", e.target.value, { shouldDirty: true });
+            }}
+            className={st.input}
+          />
+        </Col>
+      </Row>
         {/* Difficulty / Dietary */}
         <Row>
           <Col style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
@@ -367,6 +384,7 @@ export default function CreatePost() {
         </Row>
 
         {/* Hidden registered inputs */}
+        <input type="hidden" {...register("time")} value={watch("time")} />
         <input type="hidden" {...register("difficulty")} value={difficulty} />
         <input type="hidden" {...register("dietary")} value={dietary} />
         <input type="hidden" {...register("include")} value={include} />

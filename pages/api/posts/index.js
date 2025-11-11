@@ -38,31 +38,53 @@ export default async function handler(req, res) {
 
     // ---- Build MongoDB filter ----
     const filter = {};
+    // keep compatibility with code below that references baseFilter
+    const baseFilter = filter;
 
-    // Keyword: match title or content (and optionally dietary if you store it)
+    
+    const keywordOr = [];
+
+    // Keyword: match title or content 
     if (q && String(q).trim() !== "") {
-      filter.$or = [
-        { title: { $regex: rx(q) } },
-        { content: { $regex: rx(q) } },
-        { dietary: { $regex: rx(q) } }, // safe even if field absent
-      ];
+      const r = rx(q);
+      // simple $or search
+      filter.$or = [{ title: { $regex: r } }, { content: { $regex: r } }, { dietary: { $regex: r } }];
+
+      
+      keywordOr.push({ title: { $regex: r } }, { content: { $regex: r } });
     }
 
-    if (keywordOr.length) baseFilter.$and = [{ $or: keywordOr }];
+    // (Fix) only attach $and if keywordOr has items
+    if (keywordOr.length) {
+      baseFilter.$and = [...(baseFilter.$and || []), { $or: keywordOr }];
+    }
 
     if (difficulty) baseFilter.difficulty = difficulty;
     if (dietary) baseFilter.dietary = { $regex: rx(dietary) };
-    if (timeMax) baseFilter.timeMax = { $lte: toInt(timeMax, 0) };
-    if (include) baseFilter.includeIngredients = { $regex: rx(include) };
-    if (exclude) baseFilter.excludeIngredients = { $not: { $regex: rx(exclude) } };
+
+    if (timeMax) {
+      const tmax = toInt(timeMax, 0);
+      if (tmax > 0) baseFilter.timeMax = { $lte: tmax };
+    }
+
+    // Keep your original include/exclude style (regex-based)
+    if (include) {
+      
+      // for now keep minimal change: regex contains
+      baseFilter.includeIngredients = { $regex: rx(include) };
+    }
+    if (exclude) {
+      // Do not match documents whose excludeIngredients contains the token
+      baseFilter.excludeIngredients = { $not: { $regex: rx(exclude) } };
+    }
 
     // ---- Sorting ----
     const sortOption =
       sort === "newest"
         ? { createdAt: -1 }
         : sort === "liked"
-        ? { likeCount: -1 }
-        : {}; // relevance fallback = keep insertion order or $text if you add index
+        ? { likeCount: -1, createdAt: -1 }
+        : {}; // relevance fallback = insertion order \
 
     // DEBUG: check the actual filter used
     console.log("[/api/posts] filter:", JSON.stringify(filter));
@@ -80,11 +102,14 @@ export default async function handler(req, res) {
       id: String(d._id),
     }));
 
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
     return res.status(200).json({
       items: normalized,
       total,
-      totalPages: Math.max(1, Math.ceil(total / limit)),
-      page,
+      totalPages,     // used by /recipes
+      page,           // used by /recipes
+      pageCount: totalPages, // also provide alias for /pages/posts/index.jsx
     });
   } catch (e) {
     console.error("[/api/posts] error:", e);
