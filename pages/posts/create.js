@@ -248,8 +248,6 @@ export default function CreatePost() {
           </Col>
         </Row>
         
-<<<<<<< Updated upstream
-=======
 
         <Row style={{ marginTop: "8px" }}>
         <Col style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
@@ -336,7 +334,6 @@ export default function CreatePost() {
         <input type="hidden" {...register("include")} value={include} />
         <input type="hidden" {...register("exclude")} value={exclude} />
 
->>>>>>> Stashed changes
         <br />
         Content: &nbsp; &nbsp; &nbsp; &nbsp;
         <textarea
