@@ -65,7 +65,19 @@ export default function CreatePost() {
         // No image - use regular JSON approach
         const create = await api.post(
           "/posts/create",
+<<<<<<< Updated upstream
           { title, content },
+=======
+          {
+            title,
+            content,
+            timeMax: Number(time) || 0,
+            difficulty,
+            dietary,
+            includeIngredients: include,
+            excludeIngredients: exclude,
+          },
+>>>>>>> Stashed changes
           { headers: { Authorization: `Bearer ${clientToken}` } }
         );
       }
@@ -240,6 +252,95 @@ export default function CreatePost() {
           </Col>
         </Row>
         
+<<<<<<< Updated upstream
+=======
+
+        <Row style={{ marginTop: "8px" }}>
+        <Col style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <label>Cooking Time (minutes)</label>
+          <input
+            type="number"
+            min="0"
+            placeholder="e.g., 30"
+            value={time}
+            onChange={(e) => { setTime(e.target.value);
+              setValue("time", e.target.value, { shouldDirty: true });
+            }}
+            className={st.input}
+          />
+        </Col>
+      </Row>
+        {/* Difficulty / Dietary */}
+        <Row>
+          <Col style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <label>Difficulty</label>
+            <select
+              value={difficulty}
+              onChange={(e) => {
+                setDifficulty(e.target.value);
+                setValue("difficulty", e.target.value, { shouldDirty: true });
+              }}
+              className={st.input}
+            >
+              <option value="">Select difficulty</option>
+              <option value="Easy">Easy</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard</option>
+            </select>
+          </Col>
+          <Col style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <label>Dietary</label>
+            <input
+              type="text"
+              value={dietary}
+              onChange={(e) => {
+                setDietary(e.target.value);
+                setValue("dietary", e.target.value, { shouldDirty: true });
+              }}
+              placeholder="e.g., vegan, halal"
+              className={st.input}
+            />
+          </Col>
+        </Row>
+
+        {/* Include / Exclude Ingredients */}
+        <Row style={{ marginTop: "8px" }}>
+          <Col style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <label>Include Ingredients</label>
+            <input
+              type="text"
+              value={include}
+              onChange={(e) => {
+                setInclude(e.target.value);
+                setValue("include", e.target.value, { shouldDirty: true });
+              }}
+              placeholder="e.g., chicken, cheese"
+              className={st.input}
+            />
+          </Col>
+          <Col style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <label>Exclude Ingredients</label>
+            <input
+              type="text"
+              value={exclude}
+              onChange={(e) => {
+                setExclude(e.target.value);
+                setValue("exclude", e.target.value, { shouldDirty: true });
+              }}
+              placeholder="e.g., nuts, gluten"
+              className={st.input}
+            />
+          </Col>
+        </Row>
+
+        {/* Hidden registered inputs */}
+        <input type="hidden" {...register("time")} value={time} />
+        <input type="hidden" {...register("difficulty")} value={difficulty} />
+        <input type="hidden" {...register("dietary")} value={dietary} />
+        <input type="hidden" {...register("include")} value={include} />
+        <input type="hidden" {...register("exclude")} value={exclude} />
+
+>>>>>>> Stashed changes
         <br />
         Content: &nbsp; &nbsp; &nbsp; &nbsp;
         <textarea

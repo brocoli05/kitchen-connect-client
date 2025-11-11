@@ -53,8 +53,29 @@ export default async function handler(req, res) {
     if (dietary) filter.dietary = { $regex: rx(dietary) };
     if (timeMax) filter.timeMax = { $lte: toInt(timeMax, 0) };
 
+<<<<<<< Updated upstream
     if (include) filter.includeIngredients = { $regex: rx(include) };
     if (exclude) filter.excludeIngredients = { $not: { $regex: rx(exclude) } };
+=======
+    if (difficulty) baseFilter.difficulty = difficulty;
+    if (dietary) baseFilter.dietary = { $regex: rx(dietary) };
+
+    if (timeMax) {
+      const tmax = toInt(timeMax, 0);
+      if (tmax > 0) baseFilter.timeMax = { $lte: tmax };
+    }
+
+    // Keep your original include/exclude style (regex-based)
+    if (include) {
+      
+      // for now keep minimal change: regex contains
+      baseFilter.includeIngredients = { $regex: rx(include) };
+    }
+    if (exclude) {
+      // Match documents whose excludeIngredients contains the token
+      baseFilter.excludeIngredients = { $regex: rx(exclude) };
+    }
+>>>>>>> Stashed changes
 
     // ---- Sorting ----
     const sortOption =
