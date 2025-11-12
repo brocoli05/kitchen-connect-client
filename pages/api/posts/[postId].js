@@ -100,9 +100,9 @@ export default async function handler(req, res) {
         return res.status(403).json({ message: "Forbidden: not post owner" });
       }
 
-  let title, content, photoFile;
-  // collect update-able fields here
-  let updates = {};
+      let title, content, photoFile;
+      // collect update-able fields here
+      let updates = {};
 
       // Helper: promisify formidable.parse
       const parseForm = (form, req) =>
