@@ -1,3 +1,4 @@
+// pages/posts/create.js
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
@@ -10,6 +11,13 @@ import RecipeTitleInput from "@/components/RecipeTitleInput";
 export default function CreatePost() {
   const router = useRouter();
   const [selectedImage, setSelectedImage] = useState(null);
+
+  // New fields
+  const [time, setTime] = useState("");
+  const [difficulty, setDifficulty] = useState("");
+  const [dietary, setDietary] = useState("");
+  const [include, setInclude] = useState("");
+  const [exclude, setExclude] = useState("");
 
   // secure protection to make sure unauthenticated user can't come to the page
   useEffect(() => {
@@ -51,11 +59,11 @@ export default function CreatePost() {
 
   // When the post button is clicked
   const submitForm = async (data) => {
-    const { title, content } = data;
+    const { title, content, time, difficulty, dietary, include, exclude } = data;
 
     try {
       const clientToken = localStorage.getItem("userToken");
-      
+
       // If there's an image, use FormData to send both text and binary data
       if (selectedImage) {
         const formData = new FormData();
@@ -71,13 +79,13 @@ export default function CreatePost() {
         const response = await fetch('/api/posts/create', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${clientToken}`
+            Authorization: `Bearer ${clientToken}`,
           },
-          body: formData
+          body: formData,
         });
-        
+
         if (!response.ok) {
-          throw new Error('Failed to create post');
+          throw new Error("Failed to create post");
         }
       } else {
         // No image - use regular JSON approach
@@ -95,7 +103,7 @@ export default function CreatePost() {
           { headers: { Authorization: `Bearer ${clientToken}` } }
         );
       }
-      
+
       router.push("/mainpage");
     } catch (error) {
       console.error(
@@ -114,17 +122,17 @@ export default function CreatePost() {
     const file = e.target.files[0];
     if (file) {
       // Validate file type
-      if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
+      if (!file.type.startsWith("image/")) {
+        alert("Please select an image file");
         return;
       }
-      
+
       // Validate file size (5MB limit)
       if (file.size > 5 * 1024 * 1024) {
-        alert('Image size must be less than 5MB');
+        alert("Image size must be less than 5MB");
         return;
       }
-      
+
       setSelectedImage(file); // Store the actual file object
     }
   };
@@ -132,11 +140,11 @@ export default function CreatePost() {
   // Remove selected image
   const removeImage = () => {
     setSelectedImage(null);
-    
+
     // Clear the file input value so the same file can be selected again
-    const fileInput = document.getElementById('imageUpload');
+    const fileInput = document.getElementById("imageUpload");
     if (fileInput) {
-      fileInput.value = '';
+      fileInput.value = "";
     }
   };
 
@@ -155,14 +163,20 @@ export default function CreatePost() {
           onSelect={async (selection) => {
             // selection can be either a string (legacy) or an object { id, title }
             if (!selection) return;
-            let title = typeof selection === 'string' ? selection : selection.title;
+            let title =
+              typeof selection === "string" ? selection : selection.title;
             setValue("title", title);
 
             // If we have an id, fetch full recipe details and populate content
-            const id = typeof selection === 'object' && selection.id ? selection.id : null;
+            const id =
+              typeof selection === "object" && selection.id
+                ? selection.id
+                : null;
             if (id) {
               try {
-                const res = await fetch(`/api/recipes/${encodeURIComponent(id)}`);
+                const res = await fetch(
+                  `/api/recipes/${encodeURIComponent(id)}`
+                );
                 if (!res.ok) return;
                 const info = await res.json();
 
@@ -192,7 +206,10 @@ export default function CreatePost() {
 
                 // instructions may be in analyzedInstructions (array of sections)
                 let steps = [];
-                if (Array.isArray(info.analyzedInstructions) && info.analyzedInstructions.length > 0) {
+                if (
+                  Array.isArray(info.analyzedInstructions) &&
+                  info.analyzedInstructions.length > 0
+                ) {
                   info.analyzedInstructions.forEach((section) => {
                     if (Array.isArray(section.steps)) {
                       section.steps.forEach((s) => {
@@ -206,29 +223,34 @@ export default function CreatePost() {
                 
                 // fallback to plain instructions text
                 if (steps.length === 0 && info.instructions) {
-                  // split by line breaks or sentences heuristically
-                  // Note: Avoids lookbehind for compatibility with older JS environments.
                   steps = info.instructions
                     .split(/\r?\n|\. +/)
-                    .map(s => s.trim())
+                    .map((s) => s.trim())
                     .filter(Boolean)
-                    .map(s => s.endsWith('.') ? s : s + '.');
+                    .map((s) => (s.endsWith(".") ? s : s + "."));
                 }
 
-                const stepsFormatted = steps.map((s, i) => `${i + 1}. ${s}`).join('\n\n');
+                const stepsFormatted = steps
+                  .map((s, i) => `${i + 1}. ${s}`)
+                  .join("\n\n");
 
-                const formatted = `Ingredients:\n${ingredients || 'N/A'}\n\nInstructions:\n${stepsFormatted || 'N/A'}`;
-                setValue('content', formatted);
+                const formatted = `Ingredients:\n${
+                  ingredients || "N/A"
+                }\n\nInstructions:\n${stepsFormatted || "N/A"}`;
+                setValue("content", formatted);
               } catch (err) {
-                console.error('Failed to fetch recipe details', err);
+                console.error("Failed to fetch recipe details", err);
               }
             }
           }}
           placeholder="Homemade Meat Lovers Pizza"
-		  className="title"
+          className="title"
         />
         {/* Hidden input is registered so react-hook-form still validates the title */}
-        <input type="hidden" {...register("title", { required: true, maxLength: 35 })} />
+        <input
+          type="hidden"
+          {...register("title", { required: true, maxLength: 35 })}
+        />
         {errors.title?.type === "required" && (
           <span className={`${st.titleError} inputErrorText`}>
             This field is required
@@ -239,7 +261,7 @@ export default function CreatePost() {
             Title cannot contain more than 35 characters
           </span>
         )}
-        
+
         {/* Image Upload Section*/}
         <Row className={st.imageUploadSection}>
           <Col md={3}>
@@ -255,25 +277,34 @@ export default function CreatePost() {
             />
             {/* Show selected file name and remove button */}
             {selectedImage && (
-              <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ 
-                  color: '#28a745', 
-                  fontSize: '14px',
-                  fontWeight: '500'
-                }}>
+              <div
+                style={{
+                  marginTop: "10px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                }}
+              >
+                <span
+                  style={{
+                    color: "#28a745",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                  }}
+                >
                   ✓ {selectedImage.name}
                 </span>
                 <button
                   type="button"
                   onClick={removeImage}
                   style={{
-                    background: '#dc3545',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '4px 8px',
-                    fontSize: '12px',
-                    cursor: 'pointer'
+                    background: "#dc3545",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    padding: "4px 8px",
+                    fontSize: "12px",
+                    cursor: "pointer",
                   }}
                 >
                   Remove
@@ -376,14 +407,18 @@ export default function CreatePost() {
           placeholder="Here is a simple recipe to make a delicious meat lovers pizza: ..."
           {...register("content", { required: true })}
           rows={6}
-          style={{ resize: 'vertical', minHeight: '120px', maxHeight: '300px' }}
+          style={{
+            resize: "vertical",
+            minHeight: "120px",
+            maxHeight: "300px",
+          }}
         />
         {errors.content?.type === "required" && (
           <span className={`${st.contentError} inputErrorText`}>
             This field is required
           </span>
         )}
-        
+
         <br />
         <br />
         <div className={st.buttonGap}>

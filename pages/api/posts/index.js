@@ -38,6 +38,8 @@ export default async function handler(req, res) {
 
     // ---- Build MongoDB filter ----
     const filter = {};
+    // keep compatibility with code below that references baseFilter
+    const baseFilter = filter;
 
     // Keyword search across title/content/dietary (case-insensitive)
     if (q && String(q).trim() !== "") {
@@ -108,11 +110,14 @@ export default async function handler(req, res) {
       id: String(d._id),
     }));
 
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
     return res.status(200).json({
       items: normalized,
       total,
-      totalPages: Math.max(1, Math.ceil(total / limit)),
-      page,
+      totalPages,     // used by /recipes
+      page,           // used by /recipes
+      pageCount: totalPages, // also provide alias for /pages/posts/index.jsx
     });
   } catch (e) {
     console.error("[/api/posts] error:", e);

@@ -186,7 +186,7 @@ export default async function handler(req, res) {
         title: title.trim(),
         content: content.trim(),
         updatedAt: new Date(),
-        ...updates, 
+        ...updates, // Include all fields from the `updates` object
       };
 
       // If photo uploaded, store as base64 in DB (works on deployed hosts)

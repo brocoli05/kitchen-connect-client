@@ -34,6 +34,14 @@ function normalizeId(v) {
   }
 }
 
+
+/** Split ingredients by comma or space */
+function splitIngredients(value) {
+  return value
+    .split(/[\s,]+/) // Split by comma or space
+    .map((v) => v.trim()) // Trim each value
+    .filter(Boolean); // Remove empty values
+}
 export default function RecipesPage() {
   const router = useRouter();
 
@@ -64,8 +72,8 @@ export default function RecipesPage() {
         timeMax,
         difficulty,
         dietary,
-        include,
-        exclude,
+        include: splitIngredients(include).join(","), // Split and join with commas
+        exclude: splitIngredients(exclude).join(","), // Split and join with commas
         sort,
         page,
         limit: 12,
@@ -202,7 +210,7 @@ export default function RecipesPage() {
             <input
               className={s.input}
               type="text"
-              placeholder="Include ingredients (comma)"
+              placeholder="Include ingredients (comma or space)"
               value={include}
               onChange={(e) => {
                 setPage(1);
@@ -214,7 +222,7 @@ export default function RecipesPage() {
             <input
               className={s.input}
               type="text"
-              placeholder="Exclude ingredients (comma)"
+              placeholder="Exclude ingredients (comma or space)"
               value={exclude}
               onChange={(e) => {
                 setPage(1);
