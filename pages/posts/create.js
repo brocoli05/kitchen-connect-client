@@ -86,7 +86,7 @@ export default function CreatePost() {
           {
             title,
             content,
-            timeMax,
+            timeMax: time,
             difficulty,
             dietary,
             includeIngredients: include,

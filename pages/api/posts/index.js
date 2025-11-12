@@ -41,48 +41,66 @@ export default async function handler(req, res) {
     // keep compatibility with code below that references baseFilter
     const baseFilter = filter;
 
-    
     const keywordOr = [];
 
-    // Keyword: match title or content 
-    if (q && String(q).trim() !== "") {
-      const r = rx(q);
-      // simple $or search
-      filter.$or = [{ title: { $regex: r } }, { content: { $regex: r } }, { dietary: { $regex: r } }];
+// Keyword: match title/content/dietary (case-insensitive)
+if (q && String(q).trim() !== "") {
+  const r = rx(q);
+  keywordOr.push(
+    { title: { $regex: r } },
+    { content: { $regex: r } },
+    { dietary: { $regex: r } }
+  );
+}
 
-      
-      keywordOr.push({ title: { $regex: r } }, { content: { $regex: r } });
-    }
+// attach $or if we have any keyword filters
+if (keywordOr.length) {
+  filter.$or = keywordOr;
+}
 
-    // (Fix) only attach $and if keywordOr has items
-    if (keywordOr.length) {
-      baseFilter.$and = [...(baseFilter.$and || []), { $or: keywordOr }];
-    }
+// Exact difficulty match
+if (difficulty) filter.difficulty = difficulty;
 
-    if (difficulty) baseFilter.difficulty = difficulty;
-    if (dietary) baseFilter.dietary = { $regex: rx(dietary) };
+// Dietary tag partial match
+if (dietary) filter.dietary = { $regex: rx(dietary) };
 
-    if (timeMax) {
-      const tmax = toInt(timeMax, 0);
-      if (tmax > 0) baseFilter.timeMax = { $lte: tmax };
-    }
+// Max cooking time: <= timeMax
+if (timeMax) {
+  const tmax = toInt(timeMax, 0);
+  if (tmax > 0) filter.timeMax = { $lte: tmax };
+}
 
-    // Keep your original include/exclude style (regex-based)
-    if (include) {
-      
-      // for now keep minimal change: regex contains
-      baseFilter.includeIngredients = { $regex: rx(include) };
-    }
-    if (exclude) {
-      // Do not match documents whose excludeIngredients contains the token
-      baseFilter.excludeIngredients = { $not: { $regex: rx(exclude) } };
-    }
+// Split helpers for include/exclude
+const split = (s) =>
+  String(s)
+    .split(/[\s,]+/)
+    .map((v) => v.trim())
+    .filter(Boolean);
 
-    // ---- Sorting ----
-    const sortOption =
-      sort === "newest"
-        ? { createdAt: -1 }
-        : sort === "liked"
+const inc = split(include);
+const exc = split(exclude);
+
+// Include: must match all tokens
+if (inc.length) {
+  filter.$and = [
+    ...(filter.$and || []),
+    ...inc.map((word) => ({ includeIngredients: { $regex: rx(word) } })),
+  ];
+}
+
+// Exclude: must match all tokens
+if (exc.length) {
+  filter.$and = [
+    ...(filter.$and || []),
+    ...exc.map((word) => ({ excludeIngredients: { $not: { $regex: rx(word) } } })),
+  ];
+}
+
+// ---- Sorting ----
+const sortOption =
+  sort === "newest"
+    ? { createdAt: -1 }
+    : sort === "liked"
         ? { likeCount: -1, createdAt: -1 }
         : {}; // relevance fallback = insertion order \
 
