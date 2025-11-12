@@ -29,6 +29,14 @@ export default function CreatePost() {
     }
   }, [router]);
 
+
+
+  const [time, setTime] = useState("");
+  const [difficulty, setDifficulty] = useState("");
+  const [dietary, setDietary] = useState("");
+  const [include, setInclude] = useState("");
+  const [exclude, setExclude] = useState("");
+
   const {
     register,
     handleSubmit,
@@ -39,11 +47,11 @@ export default function CreatePost() {
     defaultValues: {
       title: "",
       content: "",
-      time: "",
-      difficulty: "",
-      dietary: "",
-      include: "",
-      exclude: "",
+      time: "",            
+      difficulty: "",      
+      dietary: "",         
+      include: "",         
+      exclude: "",         
     },
   });
 
@@ -59,17 +67,17 @@ export default function CreatePost() {
       // If there's an image, use FormData to send both text and binary data
       if (selectedImage) {
         const formData = new FormData();
-        formData.append("title", title);
-        formData.append("content", content);
-        formData.append("photo", selectedImage); // Send actual file
-        formData.append("timeMax", time);
-        formData.append("difficulty", difficulty);
-        formData.append("dietary", dietary);
-        formData.append("includeIngredients", include);
-        formData.append("excludeIngredients", exclude);
-
-        const response = await fetch("/api/posts/create", {
-          method: "POST",
+        formData.append('title', title);
+        formData.append('content', content);
+        formData.append('photo', selectedImage); // Send actual file
+        formData.append('timeMax', time);
+        formData.append('difficulty', difficulty);
+        formData.append('dietary', dietary);
+        formData.append('includeIngredients', include);
+        formData.append('excludeIngredients', exclude);
+        
+        const response = await fetch('/api/posts/create', {
+          method: 'POST',
           headers: {
             Authorization: `Bearer ${clientToken}`,
           },
@@ -86,7 +94,7 @@ export default function CreatePost() {
           {
             title,
             content,
-            timeMax,
+            timeMax: Number(time) || 0,
             difficulty,
             dietary,
             includeIngredients: include,
@@ -211,6 +219,8 @@ export default function CreatePost() {
                     }
                   });
                 }
+
+                
                 // fallback to plain instructions text
                 if (steps.length === 0 && info.instructions) {
                   steps = info.instructions
@@ -384,7 +394,7 @@ export default function CreatePost() {
         </Row>
 
         {/* Hidden registered inputs */}
-        <input type="hidden" {...register("time")} value={watch("time")} />
+        <input type="hidden" {...register("time")} value={time} />
         <input type="hidden" {...register("difficulty")} value={difficulty} />
         <input type="hidden" {...register("dietary")} value={dietary} />
         <input type="hidden" {...register("include")} value={include} />
