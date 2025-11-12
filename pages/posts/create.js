@@ -30,13 +30,6 @@ export default function CreatePost() {
   }, [router]);
 
 
-
-  const [time, setTime] = useState("");
-  const [difficulty, setDifficulty] = useState("");
-  const [dietary, setDietary] = useState("");
-  const [include, setInclude] = useState("");
-  const [exclude, setExclude] = useState("");
-
   const {
     register,
     handleSubmit,
