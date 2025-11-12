@@ -35,6 +35,11 @@ export default async function handler(req, res) {
         photo: post.photo ?? null,
         authorId: post.authorId ?? post.userId ?? null,
         createdAt: post.createdAt ?? null,
+        timeMax: post.timeMax ?? null,
+        difficulty: post.difficulty ?? null,
+        dietary: post.dietary ?? null,
+        include: post.include ?? null,
+        exclude: post.exclude ?? null,
       });
     }
 
@@ -118,6 +123,22 @@ export default async function handler(req, res) {
         title = Array.isArray(fields.title) ? fields.title[0] : fields.title;
         content = Array.isArray(fields.content) ? fields.content[0] : fields.content;
         photoFile = Array.isArray(files.photo) ? files.photo[0] : files.photo;
+        if (fields.timeMax) updates.timeMax = Number(Array.isArray(fields.timeMax) ? fields.timeMax[0] : fields.timeMax) || 0;
+        if (fields.difficulty) updates.difficulty = Array.isArray(fields.difficulty) ? fields.difficulty[0] : fields.difficulty;
+        if (fields.dietary) updates.dietary = Array.isArray(fields.dietary) ? fields.dietary[0] : fields.dietary;
+
+        // Convert include and exclude to arrays and rename to includeIngredients and excludeIngredients
+        if (fields.include) {
+          updates.includeIngredients = Array.isArray(fields.include)
+            ? fields.include[0].split(",").map((item) => item.trim())
+            : fields.include.split(",").map((item) => item.trim());
+        }
+        if (fields.exclude) {
+          updates.excludeIngredients = Array.isArray(fields.exclude)
+            ? fields.exclude[0].split(",").map((item) => item.trim())
+            : fields.exclude.split(",").map((item) => item.trim());
+        }
+
       } else {
         // Parse raw JSON since bodyParser is disabled
         const raw = await new Promise((resolve, reject) => {
@@ -136,6 +157,21 @@ export default async function handler(req, res) {
 
         title = parsed.title;
         content = parsed.content;
+        updates.timeMax = parsed.timeMax;
+        updates.difficulty = parsed.difficulty;
+        updates.dietary = parsed.dietary;
+
+        // Convert include and exclude to arrays and rename to includeIngredients and excludeIngredients
+        if (parsed.include) {
+          updates.includeIngredients = parsed.include
+            .split(",")
+            .map((item) => item.trim());
+        }
+        if (parsed.exclude) {
+          updates.excludeIngredients = parsed.exclude
+            .split(",")
+            .map((item) => item.trim());
+        }
       }
 
       // Validate
@@ -150,6 +186,7 @@ export default async function handler(req, res) {
         title: title.trim(),
         content: content.trim(),
         updatedAt: new Date(),
+        ...updates, // Include all fields from the `updates` object
       };
 
       // If photo uploaded, store as base64 in DB (works on deployed hosts)
@@ -185,6 +222,11 @@ export default async function handler(req, res) {
         photoUrl: updatedPost.photo || null,
         authorId: updatedPost.authorId,
         updatedAt: updatedPost.updatedAt || null,
+        timeMax: updatedPost.timeMax ?? null,
+        difficulty: updatedPost.difficulty ?? null,
+        dietary: updatedPost.dietary ?? null,
+        includeIngredients: updatedPost.includeIngredients ?? null,
+        excludeIngredients: updatedPost.excludeIngredients ?? null,
       });
     }
 
