@@ -92,7 +92,7 @@ if (inc.length) {
 if (exc.length) {
   filter.$and = [
     ...(filter.$and || []),
-    ...exc.map((word) => ({ excludeIngredients: { $regex: rx(word) } })),
+    ...exc.map((word) => ({ excludeIngredients: { $not: { $regex: rx(word) } } })),
   ];
 }
 
