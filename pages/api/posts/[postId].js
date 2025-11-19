@@ -101,6 +101,8 @@ export default async function handler(req, res) {
       }
 
       let title, content, photoFile;
+      // collect update-able fields here
+      let updates = {};
 
       // Helper: promisify formidable.parse
       const parseForm = (form, req) =>
