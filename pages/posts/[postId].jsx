@@ -2,13 +2,14 @@
 import Link from "next/link";
 import CommentSection from "@/components/CommentSection";
 import ChatWidget from "@/components/ChatWidget";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import api from "../../utils/api";
 import TopNavBar from "@/components/TopNavBar";
 import { Row, Col } from "react-bootstrap";
 import st from "@/styles/createPost.module.css";
 import Head from "next/head";
+
 
 // Social Media Share URL Helper
 const getSocialShareUrls = (title, url) => {
@@ -49,8 +50,11 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   const postId = post?.id;
   const router = useRouter();
 
+  const likingRef = useRef(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [isOwner, setIsOwner] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(typeof post.likeCount === "number" ? post.likeCount : 0);
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({
     title: post.title || "",
@@ -66,6 +70,47 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
       : `https://kitchen-connect-client.vercel.app/posts/${postIdFromProps}`;
   const shareUrls = getSocialShareUrls(post.title, currentUrl);
 
+
+  useEffect(() => {
+    const token = localStorage.getItem("userToken");
+    if (!token) return;
+  
+    (async () => {
+      try {
+        const res = await api.get(
+          `/posts/${postIdFromProps}/isLike`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setIsLiked(!!res.data.isLiked);
+        setLikeCount(typeof res.data.likeCount === "number" ? res.data.likeCount : 0);
+      } catch (e) {
+        console.warn("fetchLikeStatus failed", e?.response?.status);
+       
+      }
+    })();
+  }, [postIdFromProps]);
+
+  const handleLike = async () => {
+    const token = localStorage.getItem("userToken");
+    if (!token) {
+      alert("Please log in to like this post.");
+      return;
+    }
+    const prev = { isLiked, likeCount };
+    setIsLiked(!isLiked);
+    setLikeCount((c) => c + (isLiked ? -1 : 1));
+    try {
+      const res = await api.post(`posts/${postIdFromProps}/isLike`, null, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setIsLiked(!!res.data.isLiked);
+      if (typeof res.data.likeCount === "number") setLikeCount(res.data.likeCount);
+    } catch (e) {
+      setIsLiked(prev.isLiked);
+      setLikeCount(prev.likeCount);
+      alert("Failed to update like. Please try again.");
+    }
+  };
   useEffect(() => {
     const token =
       typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
@@ -409,6 +454,53 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
                 hour12: true,
               })}
             </p>
+            <button
+            type="button"                  
+            onClick={async () => {
+              if (likingRef.current) return;  
+              likingRef.current = true;
+
+              const token = localStorage.getItem("userToken");
+              if (!token) {
+                
+                console.warn("Please log in to like this post");
+                likingRef.current = false;
+                return;
+              }
+
+              try {
+              
+                const res = await api.post(
+                  `/posts/${postIdFromProps}/isLike`,
+                  null,
+                  { headers: { Authorization: `Bearer ${token}` } }
+                );
+
+                if (res?.data) {
+                  setIsLiked(!!res.data.isLiked);
+                  if (typeof res.data.likeCount === "number") setLikeCount(res.data.likeCount);
+                }
+              } catch (err) {
+                console.error("like failed:", err?.response?.status, err?.response?.data || err.message);
+                
+              } finally {
+                likingRef.current = false;
+              }
+            }}
+            style={{
+              padding: "8px 16px",
+              fontSize: 16,
+              border: "1px solid #333",
+              borderRadius: 4,
+              backgroundColor: isLiked ? "#e11d48" : "#fff",
+              color: isLiked ? "#fff" : "#333",
+              cursor: "pointer",
+              fontWeight: isLiked ? "bold" : "normal",
+            }}
+          >
+            ❤️ {isLiked ? "Liked" : "Like"}{typeof likeCount === "number" ? ` (${likeCount})` : ""}
+          </button>
+            
             <div style={{ display: "flex", gap: 8, position: "relative" }}>
               {/* Save Button */}
               <button
