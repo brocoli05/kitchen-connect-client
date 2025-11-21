@@ -56,6 +56,8 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(typeof post.likeCount === "number" ? post.likeCount : 0);
   const [isEditing, setIsEditing] = useState(false);
+  const [isReposted, setIsReposted] = useState(false);
+  const [repostCount, setRepostCount] = useState(typeof post.repostCount === "number" ? post.repostCount : 0);
   const [form, setForm] = useState({
     title: post.title || "",
     content: post.content || "",
@@ -71,6 +73,55 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   const shareUrls = getSocialShareUrls(post.title, currentUrl);
 
 
+  // Repost
+  useEffect(() => {
+    const token = localStorage.getItem("userToken");
+    if (!token) return;
+
+    (async () => {
+      try {
+        const res = await api.get(
+          `/posts/${postIdFromProps}/repost`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setIsReposted(!!res.data.isReposted);
+        setRepostCount(typeof res.data.repostCount === "number" ? res.data.repostCount : 0);
+      } catch (e) {
+        console.warn("fetchRepostStatus failed", e?.response?.status);
+      }
+    })();
+  }, [postIdFromProps]); 
+
+  const handleRepost = async () => {
+    const token = localStorage.getItem("userToken");
+    if (!token) {
+      alert("Please log in to repost this.");
+      return;
+    }
+
+    const prev = { isReposted, repostCount };
+    // Optimistic UI
+    setIsReposted(!isReposted);
+    setRepostCount((c) => c + (isReposted ? -1 : 1));
+
+    try {
+      const res = await api.post(`posts/${postIdFromProps}/repost`, null, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setIsReposted(!!res.data.isReposted);
+      if (typeof res.data.repostCount === "number") {
+        setRepostCount(res.data.repostCount);
+      }
+    } catch (e) {
+      // rollback
+      setIsReposted(prev.isReposted);
+      setRepostCount(prev.repostCount);
+      alert("Failed to update repost. Please try again.");
+    }
+  };
+
+
+  // Like
   useEffect(() => {
     const token = localStorage.getItem("userToken");
     if (!token) return;
@@ -500,7 +551,27 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
           >
             ❤️ {isLiked ? "Liked" : "Like"}{typeof likeCount === "number" ? ` (${likeCount})` : ""}
           </button>
-            
+          <button
+            type="button"
+            onClick={handleRepost}
+            disabled={isOwner}                
+            title={isOwner ? "You cannot repost your own post" : ""}
+            style={{
+              padding: "8px 16px",
+              fontSize: 16,
+              border: "1px solid #333",
+              borderRadius: 4,
+              backgroundColor: isReposted ? "#0ea5e9" : "#fff",
+              color: isOwner ? "#aaa" : (isReposted ? "#fff" : "#333"),
+              cursor: isOwner ? "not-allowed" : "pointer",
+              fontWeight: isReposted ? "bold" : "normal",
+              marginLeft: 8,
+              opacity: isOwner ? 0.6 : 1,
+            }}
+          >
+            🔁 {isReposted ? "Reposted" : "Repost"}
+            {typeof repostCount === "number" ? ` (${repostCount})` : ""}
+          </button>
             <div style={{ display: "flex", gap: 8, position: "relative" }}>
               {/* Save Button */}
               <button
