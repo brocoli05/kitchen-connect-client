@@ -50,6 +50,19 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   const postId = post?.id;
   const router = useRouter();
 
+  if (notFound || !post) {
+    return (
+      <>
+        <TopNavBar />
+        <div style={{ textAlign: 'center', padding: '50px' }}>
+          <h1>Post not found</h1>
+          <p>The post you're looking for doesn't exist.</p>
+          <Link href="/">Go back home</Link>
+        </div>
+      </>
+    );
+  }
+
   const likingRef = useRef(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [isOwner, setIsOwner] = useState(false);

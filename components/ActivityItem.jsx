@@ -29,6 +29,18 @@ export default function ActivityItem({ item }) {
         {item.type === "unsaved" && (
           <span title="Unsaved" style={{ fontSize: 20, lineHeight: 1 }}></span>
         )}
+        {item.type === "like" && (
+          <span title="Liked" style={{ fontSize: 20, lineHeight: 1 }}></span>
+        )}
+        {item.type === "unlike" && (
+          <span title="Unliked" style={{ fontSize: 20, lineHeight: 1 }}></span>
+        )}
+        {item.type === "repost" && (
+          <span title="Reposted" style={{ fontSize: 20, lineHeight: 1 }}></span>
+        )}
+        {item.type === "unrepost" && (
+          <span title="Unreposted" style={{ fontSize: 20, lineHeight: 1 }}></span>
+        )}
         {item.type === "comment_edited" && (
           <span title="Edited" style={{ fontSize: 20, lineHeight: 1 }}></span>
         )}
@@ -52,6 +64,10 @@ export default function ActivityItem({ item }) {
               {item.type === "comment" && "Commented"}
               {item.type === "favorite" && "Saved"}
               {item.type === "unsaved" && "Unsaved"}
+              {item.type === "like" && "Liked"}
+              {item.type === "unlike" && "Unliked"}
+              {item.type === "repost" && "Reposted"}
+              {item.type === "unrepost" && "Unreposted"}
               {item.type === "comment_edited" && "Comment edited"}
               {item.type === "comment_deleted" && "Comment deleted"}
             </div>

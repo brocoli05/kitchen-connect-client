@@ -5,6 +5,7 @@ import { Row, Col } from "react-bootstrap";
 
 // Define the sidebar menu items
 const menuItems = [
+  { name: "Notifications", path: "/profile/notifications" },
   { name: "Edit Information", path: "/profile/edit" },
   { name: "Delete Account", path: "/profile/delete" },
 ];
@@ -17,7 +18,7 @@ const ProfileLayout = ({ children }) => {
       {/* Left Sidebar */}
       <Col md={2} className="mainpage-left">
         <aside>
-          <p className="left-right-title">Profile</p>
+          <p className="left-right-title">Settings</p>
           <nav>
             <ul>
               {menuItems.map((item) => {
