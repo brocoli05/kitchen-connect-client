@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import s from "@/styles/profile-edit.module.css";
 import TopNavBar from "@/components/TopNavBar";
-import ProfileLayout from "../../components/ProfileLayout";
+import SettingsTab from "../../components/SettingsTab";
+import { Row, Col } from "react-bootstrap";
 
 export default function ProfileEditPage() {
   const router = useRouter();
@@ -180,137 +182,141 @@ export default function ProfileEditPage() {
   return (
     <>
       <TopNavBar />
-      <ProfileLayout>
-        <div className={s.page}>
-          <div className={s.wrap}>
-            <section className={s.card}>
-              <div className={s.cardHead}>Edit Information</div>
-              <div className={s.cardBody}>
-                <main>
-                  <div className={s.profile}>
-                    <div className={s.avatar}>IMG</div>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>
-                        {form.username || "Unknown"}{" "}
-                        <span style={{ color: "#6b7280" }}>(nickname)</span>
-                      </div>
-                      <div style={{ fontSize: 14, color: "#6b7280" }}>
-                        @{form.username || "unknown"}
+      <SettingsTab activeTab="update">
+        <div style={{ marginLeft: '0' , paddingTop: '1rem' }}>
+          <h3>Update Profile</h3>
+          <p>Manage your profile information.</p>
+          <div className={s.page}>
+            <div className={s.wrap}>
+              <section className={s.card}>
+                <div className={s.cardHead}>Edit Information</div>
+                <div className={s.cardBody}>
+                  <main>
+                    <div className={s.profile}>
+                      <div className={s.avatar}>IMG</div>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>
+                          {form.username || "Unknown"}{" "}
+                          <span style={{ color: "#6b7280" }}>(nickname)</span>
+                        </div>
+                        <div style={{ fontSize: 14, color: "#6b7280" }}>
+                          @{form.username || "unknown"}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <form
-                    onSubmit={onSubmit}
-                    className={s.form}
-                    aria-label="Edit profile form"
-                  >
-                    <div>
-                      <label className={s.label}>First name</label>
-                      <input
-                        className={`${s.input} ${
-                          errors.firstName ? s.error : ""
-                        }`}
-                        name="firstName"
-                        value={form.firstName}
-                        onChange={onChange}
-                        maxLength="50"
-                        placeholder="Enter your first name"
-                      />
-                      {errors.firstName && (
-                        <div
-                          style={{
-                            color: "red",
-                            fontSize: "12px",
-                            marginTop: "4px",
-                          }}
-                        >
-                          {errors.firstName}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <label className={s.label}>Last name</label>
-                      <input
-                        className={`${s.input} ${
-                          errors.lastName ? s.error : ""
-                        }`}
-                        name="lastName"
-                        value={form.lastName}
-                        onChange={onChange}
-                        maxLength="50"
-                        placeholder="Enter your last name"
-                      />
-                      {errors.lastName && (
-                        <div
-                          style={{
-                            color: "red",
-                            fontSize: "12px",
-                            marginTop: "4px",
-                          }}
-                        >
-                          {errors.lastName}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <label className={s.label}>Phone</label>
-                      <input
-                        className={`${s.input} ${errors.phone ? s.error : ""}`}
-                        name="phone"
-                        type="tel"
-                        value={form.phone}
-                        onChange={onChange}
-                        placeholder="(416) 123-4567"
-                      />
-                      {errors.phone && (
-                        <div
-                          style={{
-                            color: "red",
-                            fontSize: "12px",
-                            marginTop: "4px",
-                          }}
-                        >
-                          {errors.phone}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <label className={s.label}>Email</label>
-                      <input
-                        type="email"
-                        className={`${s.input} ${errors.email ? s.error : ""}`}
-                        name="email"
-                        value={form.email}
-                        onChange={onChange}
-                        placeholder="your.email@example.com"
-                      />
-                      {errors.email && (
-                        <div
-                          style={{
-                            color: "red",
-                            fontSize: "12px",
-                            marginTop: "4px",
-                          }}
-                        >
-                          {errors.email}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      type="submit"
-                      className={s.button}
-                      disabled={isSubmitting}
+                    <form
+                      onSubmit={onSubmit}
+                      className={s.form}
+                      aria-label="Edit profile form"
                     >
-                      {isSubmitting ? "Updating..." : "Update Information"}
-                    </button>
-                  </form>
-                </main>
-              </div>
-            </section>
+                      <div>
+                        <label className={s.label}>First name</label>
+                        <input
+                          className={`${s.input} ${
+                            errors.firstName ? s.error : ""
+                          }`}
+                          name="firstName"
+                          value={form.firstName}
+                          onChange={onChange}
+                          maxLength="50"
+                          placeholder="Enter your first name"
+                        />
+                        {errors.firstName && (
+                          <div
+                            style={{
+                              color: "red",
+                              fontSize: "12px",
+                              marginTop: "4px",
+                            }}
+                          >
+                            {errors.firstName}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className={s.label}>Last name</label>
+                        <input
+                          className={`${s.input} ${
+                            errors.lastName ? s.error : ""
+                          }`}
+                          name="lastName"
+                          value={form.lastName}
+                          onChange={onChange}
+                          maxLength="50"
+                          placeholder="Enter your last name"
+                        />
+                        {errors.lastName && (
+                          <div
+                            style={{
+                              color: "red",
+                              fontSize: "12px",
+                              marginTop: "4px",
+                            }}
+                          >
+                            {errors.lastName}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className={s.label}>Phone</label>
+                        <input
+                          className={`${s.input} ${errors.phone ? s.error : ""}`}
+                          name="phone"
+                          type="tel"
+                          value={form.phone}
+                          onChange={onChange}
+                          placeholder="(416) 123-4567"
+                        />
+                        {errors.phone && (
+                          <div
+                            style={{
+                              color: "red",
+                              fontSize: "12px",
+                              marginTop: "4px",
+                            }}
+                          >
+                            {errors.phone}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className={s.label}>Email</label>
+                        <input
+                          type="email"
+                          className={`${s.input} ${errors.email ? s.error : ""}`}
+                          name="email"
+                          value={form.email}
+                          onChange={onChange}
+                          placeholder="your.email@example.com"
+                        />
+                        {errors.email && (
+                          <div
+                            style={{
+                              color: "red",
+                              fontSize: "12px",
+                              marginTop: "4px",
+                            }}
+                          >
+                            {errors.email}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="submit"
+                        className={s.button}
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? "Updating..." : "Update Information"}
+                      </button>
+                    </form>
+                  </main>
+                </div>
+              </section>
+            </div>
           </div>
         </div>
-      </ProfileLayout>
+      </SettingsTab>
     </>
   );
 }

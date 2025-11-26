@@ -1,8 +1,11 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import ProfileLayout from "../../components/ProfileLayout";
 import DeleteAccountForm from "../../components/DeleteAccountForm";
 import TopNavBar from "@/components/TopNavBar";
+import SettingsTab from "../../components/SettingsTab";
+import { Row, Col } from "react-bootstrap";
 import s from "@/styles/profile-edit.module.css";
 
 export default function ProfileDeletePage() {
@@ -18,17 +21,13 @@ export default function ProfileDeletePage() {
   return (
     <>
       <TopNavBar />
-      <ProfileLayout>
-        <div className={s.page}>
-          <div className={s.wrap}>
-            <section className={s.card}>
-              <main>
-                <DeleteAccountForm />
-              </main>
-            </section>
-          </div>
+      <SettingsTab activeTab="delete">
+        <div style={{ marginLeft: '0', paddingTop: '1rem' }}>
+          <h3>Delete Profile</h3>
+          <p>Manage your account deletion.</p>
+          <DeleteAccountForm />
         </div>
-      </ProfileLayout>
+      </SettingsTab>
     </>
   );
 }
