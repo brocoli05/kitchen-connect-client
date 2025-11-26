@@ -44,7 +44,7 @@ const sharePost = async (title, url, onFallbackNeeded) => {
   }
 };
 
-const GEOLOCATION_TIMEOUT = 8000;
+
 
 export default function PostPage({ post, notFound, postIdFromProps }) {
   const postId = post?.id;
@@ -258,49 +258,7 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
     }
   };
 
-  // Open Google Maps directly. If geolocation is available and permitted, center on user's location.
-  const openGoogleMaps = (query = "grocery store") => {
-    const q = encodeURIComponent(query || "grocery store");
 
-    const openUrl = (lat, lng) => {
-      let url;
-      if (lat != null && lng != null) {
-        url = `https://www.google.com/maps/search/${q}/@${lat},${lng},14z`;
-      } else {
-        url = `https://www.google.com/maps/search/${q}`;
-      }
-      window.open(url, "_blank");
-    };
-
-    if (typeof navigator !== "undefined" && navigator.geolocation) {
-      const called = { v: false };
-      const timer = setTimeout(() => {
-        if (!called.v) {
-          called.v = true;
-          openUrl(); // fallback without coords
-        }
-      }, GEOLOCATION_TIMEOUT);
-
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          if (called.v) return;
-          called.v = true;
-          clearTimeout(timer);
-          openUrl(pos.coords.latitude, pos.coords.longitude);
-        },
-        (err) => {
-          if (called.v) return;
-          called.v = true;
-          clearTimeout(timer);
-          openUrl();
-        },
-        { enableHighAccuracy: true, timeout: 7000 }
-      );
-    } else {
-      // No geolocation available
-      openUrl();
-    }
-  };
   const startEdit = () => {
     setForm({ title: post.title || "", content: post.content || "" });
     setErrors({});
@@ -862,7 +820,7 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
         )}
 
         {/* --- COMMENT section --- */}
-        <div style={{ margin: "12px 0" }}>
+        {/* <div style={{ margin: "12px 0" }}>
           <button
             onClick={() => openGoogleMaps()}
             style={{
@@ -876,7 +834,7 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
           >
             Find nearby stores
           </button>
-        </div>
+        </div> */}
         <hr style={{ margin: "40px 0", borderTop: "1px solid #ddd" }} />
 
         <section className="comments-section">

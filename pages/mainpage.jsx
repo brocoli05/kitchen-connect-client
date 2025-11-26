@@ -6,6 +6,8 @@ import { useRouter } from "next/router";
 import PostCard from "@/components/PostCard";
 import Link from "next/link";
 
+const GEOLOCATION_TIMEOUT = 8000;
+
 function ToggleList({ title }) {
   const [open, setOpen] = useState(true);
   return (
@@ -16,13 +18,19 @@ function ToggleList({ title }) {
       {open && title === "Discover" && (
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
           <li>
-            <a href="#/action-1">Home</a>
+            <a href="/">Home</a>
           </li>
           <li>
             <a href="#/action-2">Browse</a>
           </li>
           <li>
-            <a href="#/action-3">Explore</a>
+            <button
+            onClick={() => openGoogleMaps()}
+            style={{
+              border: 'none',
+              backgroundColor: "inherit",
+            }}
+          >Explore</button>
           </li>
         </ul>
       )}
@@ -83,6 +91,49 @@ function Contact({ user }) {
     </Row>
   );
 }
+  // Open Google Maps directly. If geolocation is available and permitted, center on user's location.
+  const openGoogleMaps = (query = "grocery store") => {
+    const q = encodeURIComponent(query || "grocery store");
+
+    const openUrl = (lat, lng) => {
+      let url;
+      if (lat != null && lng != null) {
+        url = `https://www.google.com/maps/search/${q}/@${lat},${lng},14z`;
+      } else {
+        url = `https://www.google.com/maps/search/${q}`;
+      }
+      window.open(url, "_blank");
+    };
+
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      const called = { v: false };
+      const timer = setTimeout(() => {
+        if (!called.v) {
+          called.v = true;
+          openUrl(); // fallback without coords
+        }
+      }, GEOLOCATION_TIMEOUT);
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (called.v) return;
+          called.v = true;
+          clearTimeout(timer);
+          openUrl(pos.coords.latitude, pos.coords.longitude);
+        },
+        (err) => {
+          if (called.v) return;
+          called.v = true;
+          clearTimeout(timer);
+          openUrl();
+        },
+        { enableHighAccuracy: true, timeout: 7000 }
+      );
+    } else {
+      // No geolocation available
+      openUrl();
+    }
+  };
 export default function Home() {
   const router = useRouter();
   const [userPosts, setUserPosts] = useState([]);
