@@ -264,7 +264,7 @@ export default function Home() {
           <ToggleList title="Discover" />
           <ToggleList title="Personal" />
           <ToggleList title="Kitchen" />
-          <Row className="d-flex justify-content-center">
+          <Row className="d-flex justify-content-center m-3" >
             <button
               className="post-button "
               onClick={() => router.push("/posts/create")}
@@ -275,25 +275,6 @@ export default function Home() {
         </Col>
 
         <Col md={7} className="mainpage-center ">
-          {/* <Row className="quick-post d-flex justify-content-center m-1">
-
-            <Col
-              md={10}
-              className="d-flex align-items-center quick-post"
-              style={{ border: "none" }}
-            >
-              <input
-                type="text"
-                placeholder="What's on your mind?"
-                style={{ width: "100%", border: "none", borderRadius: "4px" }}
-              />
-            </Col>
-            <Col md={2} className="d-flex justify-content-end">
-              <img src={"/mic.svg"} alt="mic" />
-              <img src={"/mood.svg"} alt="mood" />
-              <img src={"/photo.svg"} alt="photo" />
-            </Col>
-          </Row> */}
           <Row className="m-5 d-flex justify-content-center">
             {/* Display user's own posts */}
             {Array.isArray(userPosts) && userPosts.length > 0 ? (
