@@ -5,68 +5,84 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import PostCard from "@/components/PostCard";
 import Link from "next/link";
-
 const GEOLOCATION_TIMEOUT = 8000;
 
 function ToggleList({ title }) {
   const [open, setOpen] = useState(true);
   return (
     <div className="mainpage-left-toggle-list">
-      <button onClick={() => setOpen((prev) => !prev)} className="list-title">
-        {title}
-      </button>
+	<Row 
+	style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+	onClick={() => setOpen(prev => !prev)}
+	className="list-title"
+	>
+		<span style={{width: "80%"}}>{title}</span>
+
+	<span style={{ fontSize: "20px", width: "20%", fontFamily: "monospace" }}>
+		{open ? "⌃" : "⌄"}
+	</span>
+	</Row>
       {open && title === "Discover" && (
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-          <li>
-            <a href="/">Home</a>
+		<li className="list-item">
+		<a className="list-link" href="/">
+			<span style={{ marginRight: "18px" }}>🏠</span>
+			Home
+		</a>
+		</li>
+          <li className="list-item">
+            <a className="list-link" href="#/action-2">
+			<span style={{ marginRight: "18px" }}>🔎</span>
+			Browse
+			</a>
           </li>
-          <li>
-            <a href="#/action-2">Browse</a>
+          <li className="list-item">
+            <a className="list-link" href="#/action-1"><span style={{ marginRight: "18px" }}>🌎</span>Explore</a>
           </li>
-          <li>
+        </ul>
+      )}
+      {open && title === "Personal" && (
+        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+          <li className="list-item">
+            <a className="list-link" href="#/action-1"><span style={{ marginRight: "18px" }}>🔔</span>Notifications</a>
+          </li>
+          <li className="list-item">
+            <a className="list-link" href="/posts/favorite"><span style={{ marginRight: "18px" }}>🔖</span>Favorites</a>
+          </li>
+          <li className="list-item">
+            <a className="list-link" href="#/action-3"><span style={{ marginRight: "18px" }}>📙</span>Lists</a>
+          </li>
+              <li className="list-item">
+                <a className="list-link" href="/history"><span style={{ marginRight: "18px" }}>👣</span>History</a>
+              </li>
+        </ul>
+      )}
+      {open && title === "Kitchen" && (
+        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+          <li className="list-item">
+            <a className="list-link" href="/recipes"><span style={{ marginRight: "18px" }}>🍎</span>Recipes</a>
+          </li>
+          <li className="list-item">
+            <a className="list-link" href="#/action-2"><span style={{ marginRight: "18px" }}>🥖</span>Recommended</a>
+          </li>
+          <li className="list-item">
+            <a className="list-link" href="#/action-3"><span style={{ marginRight: "18px" }}>🔥</span>Trending</a>
+          </li>
+          <li className="list-item">
             <button
             onClick={() => openGoogleMaps()}
             style={{
               border: 'none',
               backgroundColor: "inherit",
             }}
-          >Explore</button>
+			className="list-link"
+			>
+				<span style={{ marginRight: "18px" }}>🥕</span>Resources
+			</button>
           </li>
         </ul>
       )}
-      {open && title === "Personal" && (
-        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-          <li>
-            <a href="#/action-1">Notifications</a>
-          </li>
-          <li>
-            <a href="/posts/favorite">Favorites</a>
-          </li>
-          <li>
-            <a href="#/action-3">Lists</a>
-          </li>
-              <li>
-                <a href="/history">History</a>
-              </li>
-        </ul>
-      )}
-      {open && title === "Kitchen" && (
-        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-          <li>
-            <a href="/recipes">Recipes</a>
-          </li>
-          <li>
-            <a href="#/action-2">Recommended</a>
-          </li>
-          <li>
-            <a href="#/action-3">Trending</a>
-          </li>
-          <li>
-            <a href="#/action-4">Resources</a>
-          </li>
-        </ul>
-      )}
-      <button onClick={() => setOpen((prev) => !prev)}></button>
+
     </div>
   );
 }

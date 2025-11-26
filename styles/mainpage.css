@@ -16,7 +16,7 @@
   margin-bottom: 8px;
   border: none;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 800;
   background-color: transparent;
 }
 
@@ -57,4 +57,22 @@
 .feed-row {
   max-width: 240px;
   padding-left: 20px;
+}
+
+.list-item {
+   list-style: none;
+}
+.list-link {
+	display: block;      
+	width: 100%; 
+	font-weight: 600;
+	padding: 8px 8px 8px 0px;
+	text-align: left;
+	background: none;
+	border: none;
+}
+.list-item:hover .list-link {
+  text-decoration: none;
+  cursor: pointer;
+  background-color: #f7f7f75c;
 }
