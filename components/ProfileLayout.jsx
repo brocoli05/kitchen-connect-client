@@ -4,33 +4,6 @@ import { useRouter } from "next/router";
 import { Row, Col } from "react-bootstrap";
 import { signOut } from "next-auth/react";
 
-// const handleLogout = async () => {
-
-
-// try {
-// 	const token = localStorage.getItem("userToken");
-
-// 	await fetch("/api/users/logout", {
-// 	method: "POST",
-// 	headers: {
-// 		Authorization: `Bearer ${token}`,
-// 	},
-// 	});
-
-// 	await signOut({ redirect: false });
-
-// 	localStorage.removeItem("userToken");
-
-// 	router.push("/login");
-// } catch (error) {
-// 	console.error("Logout error:", error);
-// 	// Still logout even if API fails
-// 	localStorage.removeItem("userToken");
-// 	router.push("/login");
-// }
-// };
-// Define the sidebar menu items
-
 const ProfileLayout = ({ children }) => {
 
   const router = useRouter();
@@ -67,7 +40,7 @@ const menuItems = [
         <aside>
           <p className="left-right-title">Profile</p>
           <nav>
-            <ul>
+            <ul style={{ padding: "0", marginTop: "20px" }}>
   {menuItems.map((item) => {
     const isActive = item.path && router.pathname === item.path;
 
