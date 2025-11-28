@@ -122,9 +122,6 @@ export default function ChatWidget({ contextId = null }) {
                     Substitute
                   </button>
                   <button className={styles.quick} onClick={() => send("food trivia")}>Food Trivia</button>
-                  <button className={styles.quick} onClick={() => send("2 cups of butter in grams")}>Convert Units</button>
-                  <button className={styles.quick} onClick={() => send("calories in 1 cup of butter")}>Calories</button>
-                  <button className={styles.quick} onClick={() => send("which wine goes well with spaghetti carbonara")}>Wine Pairing</button>
                 </div>
               </div>
             )}
