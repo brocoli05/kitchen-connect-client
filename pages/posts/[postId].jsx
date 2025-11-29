@@ -9,7 +9,7 @@ import TopNavBar from "@/components/TopNavBar";
 import { Row, Col } from "react-bootstrap";
 import st from "@/styles/createPost.module.css";
 import Head from "next/head";
-
+import ReportPostModal from "@/components/ReportPostModal";
 
 // Social Media Share URL Helper
 const getSocialShareUrls = (title, url) => {
@@ -72,6 +72,10 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
       : `https://kitchen-connect-client.vercel.app/posts/${postIdFromProps}`;
   const shareUrls = getSocialShareUrls(post.title, currentUrl);
 
+  const [showReportModal, setShowReportModal] = useState(false);
+const [blocking, setBlocking] = useState(false);
+const [blockedPost, setBlockedPost] = useState(false);   
+const [blockedAuthor, setBlockedAuthor] = useState(false);
 
   // Repost
   useEffect(() => {
@@ -505,6 +509,76 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
                 hour12: true,
               })}
             </p>
+            {/* Report button */}
+  <button
+    type="button"
+    onClick={() => setShowReportModal(true)}
+    style={{
+      padding: "8px 16px",
+      fontSize: 16,
+      border: "1px solid #dc2626",
+      borderRadius: 4,
+      backgroundColor: "#fff",
+      color: "#dc2626",
+      cursor: "pointer",
+    }}
+  >
+    🚩 Report
+  </button>
+
+  {/* Block post (toggle) */}
+  <button
+    type="button"
+    disabled={blocking}
+    onClick={async () => {
+      const token =
+        typeof window !== "undefined"
+          ? localStorage.getItem("userToken")
+          : null;
+      if (!token) {
+        alert("Please log in to block posts.");
+        return;
+      }
+      setBlocking(true);
+      try {
+        const res = await fetch(`/api/posts/${postIdFromProps}/block`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ scope: "post" }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.message || "Failed to update block.");
+        } else {
+          setBlockedPost(data.blocked);
+          alert(
+            data.blocked
+              ? "This post is now blocked and will be hidden from your feed."
+              : "This post is unblocked."
+          );
+        }
+      } catch (e) {
+        console.error("block post failed", e);
+        alert("Failed to block post.");
+      } finally {
+        setBlocking(false);
+      }
+    }}
+    style={{
+      padding: "8px 16px",
+      fontSize: 16,
+      border: "1px solid #6b7280",
+      borderRadius: 4,
+      backgroundColor: blockedPost ? "#6b7280" : "#fff",
+      color: blockedPost ? "#fff" : "#374151",
+      cursor: blocking ? "default" : "pointer",
+    }}
+  >
+    {blockedPost ? "Blocked post" : "Block post"}
+  </button>
             <button
             type="button"                  
             onClick={async () => {
@@ -885,6 +959,11 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
         </section>
         {/* Chat widget (floating) */}
         <ChatWidget contextId={postId} />
+        <ReportPostModal
+          postId={postIdFromProps}
+          open={showReportModal}
+          onClose={() => setShowReportModal(false)}
+        />
       </div>
     </>
   );
