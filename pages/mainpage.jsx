@@ -48,6 +48,9 @@ function ToggleList({ title }) {
             <a href="/recipes">Recipes</a>
           </li>
           <li>
+            <a href="/messages">Messages</a>
+          </li>
+          <li>
             <a href="#/action-2">Recommended</a>
           </li>
           <li>
