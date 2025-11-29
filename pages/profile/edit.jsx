@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import s from "@/styles/profile-edit.module.css";
 import TopNavBar from "@/components/TopNavBar";
 import ProfileLayout from "../../components/ProfileLayout";
+import AvatarEditor from "react-avatar-editor";
+import { useProfile } from "@/context/ProfileContext";
 
 export default function ProfileEditPage() {
   const router = useRouter();
@@ -15,6 +17,11 @@ export default function ProfileEditPage() {
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { profileImage, setProfileImage } = useProfile();
+
+  const editorRef = useRef(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [zoom, setZoom] = useState(1);
 
   useEffect(() => {
     const token = localStorage.getItem("userToken");
@@ -35,6 +42,9 @@ export default function ProfileEditPage() {
           email: data.email || "",
           username: data.username || "",
         });
+
+        if (data.profileImage)
+          setProfileImage(`${data.profileImage}?t=${Date.now()}`);
       })
       .catch((error) => {
         console.error("Failed to fetch user data:", error);
@@ -164,6 +174,13 @@ export default function ProfileEditPage() {
           email: responseData.email || "",
           username: responseData.username || f.username,
         }));
+
+        if (responseData.profileImage) {
+          setProfileImage(
+            `${responseData.profileImage}?t=${new Date().getTime()}`
+          );
+        }
+
         alert("Profile updated successfully!");
       } else {
         // Handle validation errors from server
@@ -177,6 +194,49 @@ export default function ProfileEditPage() {
     }
   };
 
+  // Handle image selection
+  const onFileChange = (e) => {
+    if (e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const onZoomChange = (e) => {
+    setZoom(parseFloat(e.target.value));
+  };
+
+  const uploadCroppedImage = async () => {
+    if (!editorRef.current) return;
+
+    const canvas = editorRef.current.getImageScaledToCanvas();
+    canvas.toBlob(async (blob) => {
+      const formData = new FormData();
+      formData.append("profileImage", blob, "profile.png");
+
+      const token = localStorage.getItem("userToken");
+      try {
+        const res = await fetch("/api/profile-image", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (!data.success || !data.imageUrl) {
+          alert(data.message || "Failed to upload image");
+          return;
+        }
+
+        setProfileImage(`${data.imageUrl}?t=${Date.now()}`);
+        setSelectedFile(null);
+        alert("Profile image updated!");
+      } catch (err) {
+        console.error(err);
+        alert("Failed to upload image");
+      }
+    }, "image/png");
+  };
+
   return (
     <>
       <TopNavBar />
@@ -188,7 +248,61 @@ export default function ProfileEditPage() {
               <div className={s.cardBody}>
                 <main>
                   <div className={s.profile}>
-                    <div className={s.avatar}>IMG</div>
+                    <div className={s.avatar}>
+                      {selectedFile ? (
+                        <div className={s.editorWrapper}>
+                          <AvatarEditor
+                            ref={editorRef}
+                            image={selectedFile}
+                            width={120}
+                            height={120}
+                            border={0}
+                            borderRadius={60} // Circle
+                            color={[0, 0, 0, 0]}
+                            scale={zoom}
+                            rotate={0}
+                          />
+                          <input
+                            type="range"
+                            min="0.5"
+                            max="3"
+                            step="0.01"
+                            value={zoom}
+                            onChange={(e) =>
+                              setZoom(parseFloat(e.target.value))
+                            }
+                            className={s.zoomSlider}
+                          />
+                          <button
+                            onClick={uploadCroppedImage}
+                            className={s.button}
+                          >
+                            Save Image
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <img
+                            src={profileImage}
+                            alt="Profile"
+                            className={s.profileImg}
+                          />
+                          <label
+                            htmlFor="profileImageInput"
+                            className={s.changeBtn}
+                          >
+                            Change
+                          </label>
+                        </>
+                      )}
+                      <input
+                        id="profileImageInput"
+                        type="file"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={onFileChange}
+                      />
+                    </div>
                     <div>
                       <div style={{ fontWeight: 600 }}>
                         {form.username || "Unknown"}{" "}

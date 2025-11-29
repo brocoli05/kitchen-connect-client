@@ -1,12 +1,39 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import { Dropdown } from "react-bootstrap";
 import { signOut } from "next-auth/react";
+import { useProfile } from "../context/ProfileContext";
 
 export default function TopNavBar({}) {
   const router = useRouter();
+  const { profileImage, setProfileImage } = useProfile();
+
+  useEffect(() => {
+    const fetchProfileImage = async () => {
+      const token = localStorage.getItem("userToken");
+      if (!token) return;
+
+      try {
+        const res = await fetch("/api/profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.profileImage) {
+            setProfileImage(`${data.profileImage}?t=${Date.now()}`);
+          } else {
+            setProfileImage("/avatar.png");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch profile image:", err);
+      }
+    };
+
+    fetchProfileImage();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -79,8 +106,9 @@ export default function TopNavBar({}) {
           >
             <img
               className="rounded-circle"
-              src={"/Avatar.png"}
+              src={profileImage}
               alt="User Avatar"
+              style={{ width: "35px", height: "35px" }}
             />
           </button>
           <Dropdown className="me-3 rounded-3 d-flex align-items-center justify-content-center">
