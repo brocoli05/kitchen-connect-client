@@ -76,6 +76,7 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
 const [blocking, setBlocking] = useState(false);
 const [blockedPost, setBlockedPost] = useState(false);   
 const [blockedAuthor, setBlockedAuthor] = useState(false);
+const [isAdmin, setIsAdmin] = useState(false);
 
   // Repost
   useEffect(() => {
@@ -177,6 +178,9 @@ const [blockedAuthor, setBlockedAuthor] = useState(false);
         setCurrentUser(data);
         if (data && post?.authorId && String(data.id) === String(post.authorId)) {
           setIsOwner(true);
+        }
+        if (data && (data.role === "admin" || data.isAdmin === true)) {
+          setIsAdmin(true);
         }
       })
       .catch(() => {});
@@ -510,21 +514,21 @@ const [blockedAuthor, setBlockedAuthor] = useState(false);
               })}
             </p>
             {/* Report button */}
-  <button
-    type="button"
-    onClick={() => setShowReportModal(true)}
-    style={{
-      padding: "8px 16px",
-      fontSize: 16,
-      border: "1px solid #dc2626",
-      borderRadius: 4,
-      backgroundColor: "#fff",
-      color: "#dc2626",
-      cursor: "pointer",
-    }}
-  >
-    🚩 Report
-  </button>
+            <button
+              type="button"
+              onClick={() => setShowReportModal(true)}
+              style={{
+                padding: "8px 16px",
+                fontSize: 16,
+                border: "1px solid #dc2626",
+                borderRadius: 4,
+                backgroundColor: "#fff",
+                color: "#dc2626",
+                cursor: "pointer",
+              }}
+            >
+              🚩 Report
+            </button>
 
   {/* Block post (toggle) */}
   <button
@@ -966,6 +970,7 @@ const [blockedAuthor, setBlockedAuthor] = useState(false);
         />
       </div>
     </>
+    
   );
 }
 

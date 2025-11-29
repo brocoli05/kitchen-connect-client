@@ -6,7 +6,7 @@ import { useRouter } from "next/router";
 import PostCard from "@/components/PostCard";
 import Link from "next/link";
 
-function ToggleList({ title }) {
+function ToggleList({ title, isAdmin = false }) {
   const [open, setOpen] = useState(true);
   return (
     <div className="mainpage-left-toggle-list">
@@ -53,6 +53,12 @@ function ToggleList({ title }) {
           <li>
             <a href="#/action-2">Recommended</a>
           </li>
+          {/* Admin-only menu item */}
+          {isAdmin && (
+            <li>
+              <a href="/admin/hidden-recipes">Hidden Recipes</a>
+            </li>
+          )}
           <li>
             <a href="#/action-3">Trending</a>
           </li>
@@ -93,6 +99,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [followingUsers, setFollowingUsers] = useState([]);
+  const isAdmin = currentUser?.isAdmin === true; 
 
   // Fetch current user and their posts
   useEffect(() => {
@@ -229,9 +236,9 @@ export default function Home() {
       <Row className="mainpage">
         <Col md={2} className="mainpage-left">
           <p className="left-right-title">Feed</p>
-          <ToggleList title="Discover" />
-          <ToggleList title="Personal" />
-          <ToggleList title="Kitchen" />
+          <ToggleList title="Discover" isAdmin={isAdmin} />
+          <ToggleList title="Personal" isAdmin={isAdmin} />
+          <ToggleList title="Kitchen" isAdmin={isAdmin} />
           <Row className="d-flex justify-content-center">
             <button
               className="post-button "
