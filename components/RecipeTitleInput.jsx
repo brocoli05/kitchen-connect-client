@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 
-export default function RecipeTitleInput({ value = "", onSelect = () => {}, placeholder = "Enter recipe title..." }) {
+export default function RecipeTitleInput({
+  value = "",
+  onSelect = () => {},
+  placeholder = "Enter recipe title...",
+  className = "border p-2 w-full rounded",
+  inputProps = {},
+}) {
   const [title, setTitle] = useState(value || "");
   const [suggestions, setSuggestions] = useState([]);
   const [open, setOpen] = useState(false);
@@ -44,7 +50,8 @@ export default function RecipeTitleInput({ value = "", onSelect = () => {}, plac
           onSelect(e.target.value);
         }}
         placeholder={placeholder}
-        className="border p-2 w-full rounded"
+        className={className}
+        {...inputProps}
       />
 
       {open && suggestions.length > 0 && (

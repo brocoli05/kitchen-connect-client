@@ -1,105 +1,204 @@
-.page{
-    margin-top: 30px;
-    margin-left: 290px;
-    font-size: 18px;
+.shell {
+    max-width: 1024px;
+    margin: 0 auto;
+    padding: 48px 24px 120px;
 }
 
-.form{
-    margin-top: 40px;
-    margin-left: 100px;
-	margin-right: 100px;
+.hero {
+    background: #101828;
+    color: #fff;
+    border-radius: 24px;
+    padding: 40px;
+    margin-bottom: 32px;
 }
 
-.title{
-    color: black;
-    background-color: transparent;
-    border: 1px solid #ccc;
-    width: 910px;
-    height: 40px;
-    border-radius: 8px;
-    padding-left: 10px;
-    padding-top: 5px;
-    vertical-align: top;
-    resize: none;
+.hero h1 {
+    font-size: 32px;
+    margin: 8px 0;
 }
 
-.titleError{
-    color: red;
+.hero p {
+    color: rgba(255, 255, 255, 0.9);
+    max-width: 600px;
+}
+
+.kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
     font-size: 12px;
-    margin-top: 5px;
-    margin-left: 100px;
-    display: block;
+    color: #a4bcfd;
+    margin: 0;
 }
 
-.titleError2{
-    color: red;
-    font-size: 12px;
-    margin-top: 5px;
-    margin-left: 100px;
-    display: block;
+.card {
+    background: #fff;
+    border-radius: 24px;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 48px;
+    box-shadow: 0 20px 70px rgba(15, 23, 42, 0.08);
 }
 
-.content{
-    color: black;
-    background-color: transparent;
-    border: 1px solid #ccc;
-    width: 910px;
-    height: 560px;
-    border-radius: 8px;
-    padding-left: 10px;
-    padding-top: 10px;
-    vertical-align: top;
-    /* resize: none; */
+.section {
+    border: 1px solid #eaecf0;
+    border-radius: 20px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
 }
 
-.contentError{
-    color: red;
-    font-size: 12px;
-    margin-top: 5px;
-    margin-left: 100px;
-    display: block;
+.sectionHeader h2 {
+    margin: 0 0 8px;
+    font-size: 20px;
 }
 
-.buttonGap{
-    gap: 15px;
-    padding-right: 630px;
+.sectionHeader p {
+    margin: 0;
+    color: #475467;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.label {
+    font-weight: 600;
+    color: #1d2939;
+}
+
+.inputControl {
+    border-radius: 12px;
+    border: 1px solid #d0d5dd;
+    padding: 12px 14px;
+    font-size: 15px;
+    background: #fcfcfd;
+    color: #101828;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.inputControl::placeholder {
+    color: #98a2b3;
+}
+
+.inputControl:focus {
+    outline: none;
+    border-color: #7f56d9;
+    box-shadow: 0 0 0 3px rgba(127, 86, 217, 0.2);
+}
+
+.textArea {
+    min-height: 200px;
+    resize: vertical;
+}
+
+.gridTwo {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+}
+
+.uploadCard {
+    border: 1px dashed #c7d7fe;
+    border-radius: 20px;
+    padding: 32px;
+    background: #f8f9ff;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.uploadInput {
+    display: none;
+}
+
+.uploadLabel {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 6px;
+    cursor: pointer;
+    color: #344054;
+    font-weight: 600;
+}
+
+.uploadLabel span {
+    font-size: 16px;
+}
+
+.uploadLabel small {
+    font-weight: 400;
+    color: #475467;
+}
+
+.uploadMeta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    color: #039855;
+}
+
+.uploadMeta button {
+    border: none;
+    background: transparent;
+    color: #d92d20;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.buttonRow {
     display: flex;
     justify-content: flex-end;
+    gap: 16px;
 }
 
-.file{
-    display:none;
+.button {
+    border-radius: 999px;
+    border: none;
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
-.uploadButton{
-    color: black;
-    padding: 0 10px;
-    border-radius: 8px;
-    font-size: 16px;
+.button:active {
+    transform: scale(0.98);
 }
 
-.uploadButtonGrey{
-    background-color: #44404046;
+.buttonGhost {
+    background: #f4ebff;
+    color: #6941c6;
 }
 
-.uploadButtonGreen{
-    background-color: #7cd899a6;
+.buttonPrimary {
+    background: #7f56d9;
+    color: #fff;
+    box-shadow: 0 15px 30px rgba(127, 86, 217, 0.25);
 }
 
-.cancelButton{
-    color: black;
-    background-color: #EEEEEE;
-    width: 85px;
-    height: 40px;
-    border-radius: 8px;
-    font-size: 16px;
+.buttonPrimary:hover {
+    background: #6941c6;
 }
 
-.submitButton{
-    color: white;
-    background-color: black;
-    width: 85px;
-    height: 40px;
-    border-radius: 8px;
-    font-size: 16px
+.error {
+    color: #d92d20;
+    font-size: 13px;
+}
+
+@media (max-width: 768px) {
+    .hero,
+    .card,
+    .section {
+        padding: 24px;
+    }
+
+    .buttonRow {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
 }
