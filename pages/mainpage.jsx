@@ -4,6 +4,7 @@ import { Row, Col } from "react-bootstrap";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import PostCard from "@/components/PostCard";
+import RecommendationsSection from "@/components/RecommendationsSection";
 import Link from "next/link";
 
 function ToggleList({ title }) {
@@ -86,7 +87,6 @@ function Contact({ user }) {
 export default function Home() {
   const router = useRouter();
   const [userPosts, setUserPosts] = useState([]);
-  const [suggestedPosts, setSuggestedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [followingUsers, setFollowingUsers] = useState([]);
@@ -159,16 +159,6 @@ export default function Home() {
             setUserPosts([]);
           }
 
-          const suggestedResponse = await fetch(`/api/users/suggested/posts`);
-          if (suggestedResponse.ok) {
-            const suggestedData = await suggestedResponse.json();
-            if (suggestedData.items && Array.isArray(suggestedData.items)) {
-              setSuggestedPosts(suggestedData.items); // 
-            }
-          } else {
-            console.log('No suggested posts available');
-            setSuggestedPosts([]);
-          }
         } else {
           console.error('Failed to fetch user:', userResponse.status);
           setUserPosts([]);
@@ -239,15 +229,8 @@ export default function Home() {
           </Row>
         </Col>
         <Col md={3} className="mainpage-right p-3">
-          <p className="left-right-title">Suggested</p>
-          <Row className="feed-row d-flex justify-content-start">
-            {/* Display one suggested post (random post from other users) */}
-            {Array.isArray(suggestedPosts) && suggestedPosts.length > 0 ? (
-              <PostCard key={`suggested-${suggestedPosts[0]._id || suggestedPosts[0].id}`} post={suggestedPosts[0]} />
-            ) : (
-              <div>No suggested posts available</div>
-            )}
-          </Row>
+            <p className="left-right-title">Suggested</p>
+            <RecommendationsSection limit={3} compact title="Recommended for you" />
           <Row>
             <p style={{ fontWeight: "bold", fontSize: "24px" }}>Following</p>
             {followingUsers.length > 0 ? (

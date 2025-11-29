@@ -9,6 +9,7 @@ import TopNavBar from "@/components/TopNavBar";
 import { Row, Col } from "react-bootstrap";
 import st from "@/styles/createPost.module.css";
 import Head from "next/head";
+import RecommendationsSection from "@/components/RecommendationsSection";
 
 
 // Social Media Share URL Helper
@@ -861,6 +862,14 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
           )}
         </div>
         <br />
+        <div style={{ margin: "24px 0" }}>
+          <RecommendationsSection
+            limit={3}
+            title="You might also like"
+            compact
+            showToggle={false}
+          />
+        </div>
         {/* Owner actions */}
         {isOwner && (
           <div style={{ marginTop: 12, display: "flex", gap: 8 }}>

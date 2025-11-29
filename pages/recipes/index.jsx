@@ -6,6 +6,7 @@ import Link from "next/link";
 import TopNavBar from "@/components/TopNavBar";
 import api from "@/utils/api";
 import s from "@/styles/recipes.module.css";
+import RecommendationsSection from "@/components/RecommendationsSection";
 
 /** Trim strings and drop empty/null/undefined values */
 function sanitize(obj) {
@@ -63,6 +64,7 @@ export default function RecipesPage() {
     page: 1,
   });
   const [loading, setLoading] = useState(false);
+  const [lastQueryLogged, setLastQueryLogged] = useState("");
 
   // --- Memoized query params (cleaned) ---
   const params = useMemo(
@@ -115,6 +117,25 @@ export default function RecipesPage() {
       controller.abort();
     };
   }, [params]);
+
+  useEffect(() => {
+    const normalized = q.trim();
+    if (normalized.length < 3) return;
+    if (typeof window === "undefined") return;
+    const token = localStorage.getItem("userToken");
+    if (!token || normalized === lastQueryLogged) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        await api.post("/users/search-history", { query: normalized });
+        setLastQueryLogged(normalized);
+      } catch (error) {
+        console.warn("Failed to record search term", error?.response?.status);
+      }
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [q, lastQueryLogged]);
 
   // --- Reset all filters ---
   const handleClear = () => {
@@ -250,6 +271,14 @@ export default function RecipesPage() {
             </button>
           </div>
         </header>
+
+        <div style={{ marginBottom: 24 }}>
+          <RecommendationsSection
+            limit={4}
+            title="Recommended recipes"
+            compact
+          />
+        </div>
 
         {/* --- Loading / Empty states --- */}
         {loading && <div style={{ padding: "10px" }}>Loading...</div>}
