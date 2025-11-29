@@ -46,7 +46,59 @@ const sharePost = async (title, url, onFallbackNeeded) => {
 
 const GEOLOCATION_TIMEOUT = 8000;
 
-export default function PostPage({ post, notFound, postIdFromProps }) {
+const DIFFICULTY_OPTIONS = ["", "Easy", "Medium", "Hard"];
+
+const formatTimeValue = (value) => {
+  if (value === 0) return "0";
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed === "" ? "" : trimmed;
+  }
+  return "";
+};
+
+const formatListForInput = (value, fallback = "") => {
+  if (Array.isArray(value)) return value.join(", ");
+  if (typeof value === "string") return value;
+  if (Array.isArray(fallback)) return fallback.join(", ");
+  if (typeof fallback === "string") return fallback;
+  return "";
+};
+
+const resolveList = (value, fallback) => {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (Array.isArray(fallback)) return fallback.filter(Boolean);
+  const source = value ?? fallback;
+  return typeof source === "string"
+    ? source
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : [];
+};
+
+const splitInputList = (value) =>
+  String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const createFormState = (source = {}) => ({
+  title: source.title || "",
+  content: source.content || "",
+  time: formatTimeValue(source.timeMax),
+  difficulty: source.difficulty || "",
+  dietary: typeof source.dietary === "string" ? source.dietary : "",
+  include: formatListForInput(source.includeIngredients, source.include),
+  exclude: formatListForInput(source.excludeIngredients, source.exclude),
+});
+
+export default function PostPage({ post: initialPost, notFound, postIdFromProps }) {
+  const [postData, setPostData] = useState(initialPost);
+  const [form, setForm] = useState(() => createFormState(initialPost));
+  const [isSaving, setIsSaving] = useState(false);
+  const post = postData;
   const postId = post?.id;
   const router = useRouter();
 
@@ -58,10 +110,28 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   const [isEditing, setIsEditing] = useState(false);
   const [isReposted, setIsReposted] = useState(false);
   const [repostCount, setRepostCount] = useState(typeof post.repostCount === "number" ? post.repostCount : 0);
-  const [form, setForm] = useState({
-    title: post.title || "",
-    content: post.content || "",
-  });
+  const includeList = resolveList(post?.includeIngredients, post?.include);
+  const excludeList = resolveList(post?.excludeIngredients, post?.exclude);
+  const metaCardStyle = {
+    flex: "1 1 180px",
+    border: "1px solid #eee",
+    borderRadius: 8,
+    padding: "12px 16px",
+    minWidth: 180,
+    background: "#fdfdfd",
+  };
+  const metaLabelStyle = { fontSize: 12, color: "#6b7280", marginBottom: 4 };
+  const metaValueStyle = { fontWeight: 600, fontSize: 16 };
+  const cookingTimeLabel =
+    post?.timeMax === 0 || (typeof post?.timeMax === "number" && Number.isFinite(post?.timeMax))
+      ? `${post.timeMax} min`
+      : post?.timeMax
+      ? `${post.timeMax} min`
+      : "Not specified";
+  const difficultyLabel = post?.difficulty || "Not specified";
+  const dietaryLabel = post?.dietary || "Not specified";
+  const includeDisplay = includeList.length ? includeList.join(", ") : "None";
+  const excludeDisplay = excludeList.length ? excludeList.join(", ") : "None";
   const [errors, setErrors] = useState({});
   const [isFavorited, setIsFavorited] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -302,15 +372,17 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
     }
   };
   const startEdit = () => {
-    setForm({ title: post.title || "", content: post.content || "" });
+    setForm(createFormState(post));
     setErrors({});
     setIsEditing(true);
   };
 
   const cancelEdit = () => {
+    setForm(createFormState(post));
     setIsEditing(false);
     setErrors({});
-    setSelectedImage(null); // Clear selected image when cancelling
+    setSelectedImage(null);
+    setIsSaving(false);
   };
 
   const onChange = (e) => {
@@ -320,66 +392,108 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   };
 
   const saveEdit = async () => {
-    // Client-side validation
     const newErrors = {};
-    if (!form.title || form.title.trim() === "")
-      newErrors.title = "Title is required";
-    if (!form.content || form.content.trim() === "")
-      newErrors.content = "Content is required";
+    const trimmedTitle = form.title?.trim() || "";
+    const trimmedContent = form.content?.trim() || "";
+    const parsedTime = form.time === "" ? null : Number(form.time);
+    if (!trimmedTitle) newErrors.title = "Title is required";
+    if (!trimmedContent) newErrors.content = "Content is required";
+    if (form.time !== "" && (!Number.isFinite(parsedTime) || parsedTime < 0)) {
+      newErrors.time = "Cooking time must be zero or a positive number";
+    }
+    if (form.difficulty && !DIFFICULTY_OPTIONS.includes(form.difficulty)) {
+      newErrors.difficulty = "Difficulty must be Easy, Medium, or Hard";
+    }
+    const dietaryTags = splitInputList(form.dietary);
+    const invalidDietary = dietaryTags.filter(
+      (tag) => !/^[a-zA-Z\s-]+$/.test(tag)
+    );
+    if (invalidDietary.length) {
+      newErrors.dietary = `Unsupported dietary tags: ${invalidDietary.join(", ")}`;
+    }
+
     if (Object.keys(newErrors).length) {
       setErrors(newErrors);
       return;
     }
 
+    setErrors({});
+    setIsSaving(true);
+
+    const includeList = splitInputList(form.include);
+    const excludeList = splitInputList(form.exclude);
+    const payload = {
+      title: trimmedTitle,
+      content: trimmedContent,
+      timeMax: parsedTime ?? "",
+      difficulty: form.difficulty,
+      dietary: dietaryTags.join(", "),
+      include: includeList.join(", "),
+      exclude: excludeList.join(", "),
+    };
+
     const token =
       typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
+
     try {
       let resp;
 
       if (selectedImage) {
-        // If there's an image, use FormData
         const formData = new FormData();
-        formData.append("title", form.title);
-        formData.append("content", form.content);
+        Object.entries(payload).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            formData.append(key, value === null ? "" : String(value));
+          }
+        });
         formData.append("photo", selectedImage);
 
         resp = await fetch(`/api/posts/${postId}`, {
           method: "PUT",
-          headers: { Authorization: `Bearer ${token}` }, // Don't set Content-Type for FormData
+          headers: { Authorization: `Bearer ${token}` },
           body: formData,
         });
       } else {
-        // No image - use regular JSON approach
         resp = await fetch(`/api/posts/${postId}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ title: form.title, content: form.content }),
+          body: JSON.stringify(payload),
         });
       }
 
       const data = await resp.json();
       if (resp.ok) {
-        // Update UI
-        post.title = data.title;
-        post.content = data.content;
-        if (data.photoUrl) {
-          post.photoUrl = data.photoUrl; // Update photo if new one was uploaded
-        }
-        setIsEditing(false);
-        setSelectedImage(null); // Clear selected image
-        alert("Post updated");
+        const updatedPost = {
+          ...post,
+          title: data.title,
+          content: data.content,
+          photo: data.photo || data.photoUrl || post.photo,
+          timeMax: data.timeMax ?? null,
+          difficulty: data.difficulty ?? "",
+          dietary: data.dietary ?? "",
+          includeIngredients: Array.isArray(data.includeIngredients)
+            ? data.includeIngredients
+            : includeList,
+          excludeIngredients: Array.isArray(data.excludeIngredients)
+            ? data.excludeIngredients
+            : excludeList,
+        };
 
-        // Refresh the page to show updated image
-        window.location.reload();
+        setPostData(updatedPost);
+        setForm(createFormState(updatedPost));
+        setIsEditing(false);
+        setSelectedImage(null);
+        alert("Post updated");
       } else {
         alert(data.message || "Failed to update post");
       }
     } catch (e) {
       console.error(e);
       alert("Failed to update post. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -695,6 +809,36 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
           </div>
         )}
 
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 12,
+            margin: "16px 0",
+          }}
+        >
+          <div style={metaCardStyle}>
+            <div style={metaLabelStyle}>Cooking Time</div>
+            <div style={metaValueStyle}>{cookingTimeLabel}</div>
+          </div>
+          <div style={metaCardStyle}>
+            <div style={metaLabelStyle}>Difficulty</div>
+            <div style={metaValueStyle}>{difficultyLabel}</div>
+          </div>
+          <div style={metaCardStyle}>
+            <div style={metaLabelStyle}>Dietary</div>
+            <div style={metaValueStyle}>{dietaryLabel}</div>
+          </div>
+          <div style={metaCardStyle}>
+            <div style={metaLabelStyle}>Include</div>
+            <div style={metaValueStyle}>{includeDisplay}</div>
+          </div>
+          <div style={metaCardStyle}>
+            <div style={metaLabelStyle}>Exclude</div>
+            <div style={metaValueStyle}>{excludeDisplay}</div>
+          </div>
+        </div>
+
         <article
           style={{
             whiteSpace: "pre-wrap",
@@ -751,9 +895,7 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
 
             {isEditing && (
               <div style={{ marginTop: 12, width: "100%" }}>
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
-                >
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <input
                     name="title"
                     value={form.title}
@@ -775,72 +917,150 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
                   {errors.content && (
                     <div style={{ color: "red" }}>{errors.content}</div>
                   )}
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {/* Image Upload Section*/}
-                    <Row className={st.imageUploadSection}>
-                      <Col md={3}>
-                        <label htmlFor="imageUpload">
-                          Add Photo (Optional):
-                        </label>
-                      </Col>
-                      <Col md={9}>
-                        <input
-                          type="file"
-                          id="imageUpload"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          style={{ margin: "10px 0", display: "block" }}
-                        />
-                        {/* Show selected file name and remove button */}
-                        {selectedImage && (
-                          <div
+
+                  <Row>
+                    <Col style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <label>Cooking Time (minutes)</label>
+                      <input
+                        name="time"
+                        type="number"
+                        min="0"
+                        value={form.time}
+                        onChange={onChange}
+                        placeholder="e.g., 30"
+                        className={st.input}
+                      />
+                      {errors.time && (
+                        <div style={{ color: "red" }}>{errors.time}</div>
+                      )}
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <label>Difficulty</label>
+                      <select
+                        name="difficulty"
+                        value={form.difficulty}
+                        onChange={onChange}
+                        className={st.input}
+                      >
+                        {DIFFICULTY_OPTIONS.map((opt) => (
+                          <option key={opt || "none"} value={opt}>
+                            {opt ? opt : "Select difficulty"}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.difficulty && (
+                        <div style={{ color: "red" }}>{errors.difficulty}</div>
+                      )}
+                    </Col>
+                    <Col style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <label>Dietary Tags</label>
+                      <input
+                        name="dietary"
+                        type="text"
+                        value={form.dietary}
+                        onChange={onChange}
+                        placeholder="e.g., vegan, halal"
+                        className={st.input}
+                      />
+                      {errors.dietary && (
+                        <div style={{ color: "red" }}>{errors.dietary}</div>
+                      )}
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <label>Include Ingredients</label>
+                      <input
+                        name="include"
+                        type="text"
+                        value={form.include}
+                        onChange={onChange}
+                        placeholder="e.g., chicken, cheese"
+                        className={st.input}
+                      />
+                    </Col>
+                    <Col style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <label>Exclude Ingredients</label>
+                      <input
+                        name="exclude"
+                        type="text"
+                        value={form.exclude}
+                        onChange={onChange}
+                        placeholder="e.g., nuts, gluten"
+                        className={st.input}
+                      />
+                    </Col>
+                  </Row>
+
+                  <Row className={st.imageUploadSection}>
+                    <Col md={3}>
+                      <label htmlFor="imageUpload">Add Photo (Optional):</label>
+                    </Col>
+                    <Col md={9}>
+                      <input
+                        type="file"
+                        id="imageUpload"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        style={{ margin: "10px 0", display: "block" }}
+                      />
+                      {selectedImage && (
+                        <div
+                          style={{
+                            marginTop: "10px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                          }}
+                        >
+                          <span
                             style={{
-                              marginTop: "10px",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "10px",
+                              color: "#28a745",
+                              fontSize: "14px",
+                              fontWeight: "500",
                             }}
                           >
-                            <span
-                              style={{
-                                color: "#28a745",
-                                fontSize: "14px",
-                                fontWeight: "500",
-                              }}
-                            >
-                              ✓ {selectedImage.name}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={removeImage}
-                              style={{
-                                background: "#dc3545",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "4px",
-                                padding: "4px 8px",
-                                fontSize: "12px",
-                                cursor: "pointer",
-                              }}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        )}
-                      </Col>
-                    </Row>
+                            ✓ {selectedImage.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={removeImage}
+                            style={{
+                              background: "#dc3545",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "4px",
+                              padding: "4px 8px",
+                              fontSize: "12px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </Col>
+                  </Row>
 
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <button
                       onClick={saveEdit}
+                      disabled={isSaving}
                       style={{
                         background: "#10b981",
                         color: "#fff",
                         padding: "8px 12px",
                         border: "none",
                         borderRadius: 6,
+                        opacity: isSaving ? 0.7 : 1,
+                        cursor: isSaving ? "not-allowed" : "pointer",
                       }}
                     >
-                      Save
+                      {isSaving ? "Saving..." : "Save"}
                     </button>
                     <button
                       onClick={cancelEdit}
