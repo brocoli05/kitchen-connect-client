@@ -276,16 +276,6 @@ export default function Home() {
             setUserPosts([]);
           }
 
-          const suggestedResponse = await fetch(`/api/users/suggested/posts`);
-          if (suggestedResponse.ok) {
-            const suggestedData = await suggestedResponse.json();
-            if (suggestedData.items && Array.isArray(suggestedData.items)) {
-              setSuggestedPosts(suggestedData.items); //
-            }
-          } else {
-            console.log("No suggested posts available");
-            setSuggestedPosts([]);
-          }
         } else {
           console.error("Failed to fetch user:", userResponse.status);
           setUserPosts([]);
