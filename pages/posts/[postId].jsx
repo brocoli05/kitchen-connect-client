@@ -106,6 +106,28 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
   const [repostCount, setRepostCount] = useState(
     typeof initialPost?.repostCount === "number" ? initialPost.repostCount : 0
   );
+  const includeList = resolveList(post?.includeIngredients, post?.include);
+  const excludeList = resolveList(post?.excludeIngredients, post?.exclude);
+  const metaCardStyle = {
+    flex: "1 1 180px",
+    border: "1px solid #eee",
+    borderRadius: 8,
+    padding: "12px 16px",
+    minWidth: 180,
+    background: "#fdfdfd",
+  };
+  const metaLabelStyle = { fontSize: 12, color: "#6b7280", marginBottom: 4 };
+  const metaValueStyle = { fontWeight: 600, fontSize: 16 };
+  const cookingTimeLabel =
+    post?.timeMax === 0 || (typeof post?.timeMax === "number" && Number.isFinite(post?.timeMax))
+      ? `${post.timeMax} min`
+      : post?.timeMax
+      ? `${post.timeMax} min`
+      : "Not specified";
+  const difficultyLabel = post?.difficulty || "Not specified";
+  const dietaryLabel = post?.dietary || "Not specified";
+  const includeDisplay = includeList.length ? includeList.join(", ") : "None";
+  const excludeDisplay = excludeList.length ? excludeList.join(", ") : "None";
   const [errors, setErrors] = useState({});
   const [isFavorited, setIsFavorited] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -253,6 +275,8 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
           setIsOwner(true);
         } else {
           setIsOwner(false);
+        } else {
+          setIsOwner(false);
         }
       })
       .catch(() => { });
@@ -374,6 +398,21 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
       dietary: dietaryTags.join(", "),
       include: includeCsv,
       exclude: excludeCsv,
+    };
+
+    setErrors({});
+    setIsSaving(true);
+
+    const includeList = splitInputList(form.include);
+    const excludeList = splitInputList(form.exclude);
+    const payload = {
+      title: trimmedTitle,
+      content: trimmedContent,
+      timeMax: parsedTime ?? "",
+      difficulty: form.difficulty,
+      dietary: dietaryTags.join(", "),
+      include: includeList.join(", "),
+      exclude: excludeList.join(", "),
     };
 
     const token =
@@ -858,9 +897,7 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
 
             {isEditing && (
               <div style={{ marginTop: 12, width: "100%" }}>
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
-                >
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <input
                     name="title"
                     value={form.title}
