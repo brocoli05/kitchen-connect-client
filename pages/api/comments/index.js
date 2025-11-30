@@ -53,11 +53,30 @@ export default async function handler(req, res) {
 
         // Try to fetch post title for storing in history
         let postTitle = null;
+        let postAuthor = null;
         try {
-          const post = await db.collection("posts").findOne({ _id: new ObjectId(postId) }, { projection: { title: 1 } });
+          const post = await db.collection("posts").findOne({ _id: new ObjectId(postId) }, { projection: { title: 1, authorId: 1, userId: 1 } });
           if (post && post.title) postTitle = post.title;
+          postAuthor = post?.authorId || post?.userId;
         } catch (e) {
           // ignore
+        }
+
+        // Create notification for post author
+        if (postAuthor && !new ObjectId(postAuthor).equals(new ObjectId(authenticatedUserId))) {
+          try {
+            const actingUser = await db.collection("users").findOne({ _id: new ObjectId(authenticatedUserId) }, { projection: { username: 1 } });
+            const username = actingUser?.username || 'Someone';
+            const message = `${username} commented: "${text}" on your post - "${postTitle || 'Untitled'}"`;
+            await db.collection('notifications').insertOne({
+              userId: new ObjectId(postAuthor),
+              message,
+              postId: new ObjectId(postId),
+              createdAt: new Date(),
+            });
+          } catch (e) {
+            console.warn("Failed to create comment notification", e);
+          }
         }
 
         if (commentId) {
