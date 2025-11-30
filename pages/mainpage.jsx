@@ -69,7 +69,7 @@ function ToggleList({ title, isAdmin = false }) {
             </Link>
           </li>
           <li className="list-item">
-            <a className="list-link" href="#/action-3"><span style={{ marginRight: "18px" }}>🔥</span>Trending</a>
+            <a className="list-link" href="/trending"><span style={{ marginRight: "18px" }}>🔥</span>Trending</a>
           </li>
           {/* Admin-only menu item */}
           {isAdmin && (
