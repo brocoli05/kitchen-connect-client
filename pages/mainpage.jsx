@@ -69,7 +69,7 @@ function ToggleList({ title, isAdmin = false }) {
             </Link>
           </li>
           <li className="list-item">
-            <a className="list-link" href="#/action-3"><span style={{ marginRight: "18px" }}>🔥</span>Trending</a>
+            <a className="list-link" href="/trending"><span style={{ marginRight: "18px" }}>🔥</span>Trending</a>
           </li>
           {/* Admin-only menu item */}
           {isAdmin && (
@@ -103,18 +103,21 @@ function Contact({ user }) {
     <Row className="mb-3">
       <Col md={4}>
         <img
-          src={user.avatarUrl || '/avatar.png'}
+          src={user.avatarUrl || "/avatar.png"}
           alt="Avatar"
           className="profile-contact-img"
         />
       </Col>
       <Col md={8}>
-        <Link href={`/users/${user.id}`} style={{ textDecoration: 'none' }}>
-          <p className="profile-contact-name" style={{ cursor: 'pointer', color: '#007bff' }}>
+        <Link href={`/users/${user.id}`} style={{ textDecoration: "none" }}>
+          <p
+            className="profile-contact-name"
+            style={{ cursor: "pointer", color: "#007bff" }}
+          >
             {user.name || user.username}
           </p>
         </Link>
-        <p className="profile-contact-bio">{user.bio || 'No bio available'}</p>
+        <p className="profile-contact-bio">{user.bio || "No bio available"}</p>
       </Col>
     </Row>
   );
@@ -185,14 +188,14 @@ export default function Home() {
         }
 
         // Get current user info with authorization header
-        const userResponse = await fetch('/api/me', {
+        const userResponse = await fetch("/api/me", {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         });
         if (userResponse.ok) {
           const user = await userResponse.json();
-          console.log('User data:', user); // Debug log
+          console.log("User data:", user); // Debug log
           setCurrentUser(user);
 
           // Fetch detailed info about users the current user is following
@@ -208,11 +211,13 @@ export default function Home() {
                 })
               );
               // Filter out any null results and set the following users
-              const validFollowingUsers = followingUsersData.filter(user => user !== null);
+              const validFollowingUsers = followingUsersData.filter(
+                (user) => user !== null
+              );
               setFollowingUsers(validFollowingUsers);
-              console.log('Following users:', validFollowingUsers);
+              console.log("Following users:", validFollowingUsers);
             } catch (error) {
-              console.error('Error fetching following users:', error);
+              console.error("Error fetching following users:", error);
               setFollowingUsers([]);
             }
           } else {
@@ -275,14 +280,14 @@ export default function Home() {
           if (suggestedResponse.ok) {
             const suggestedData = await suggestedResponse.json();
             if (suggestedData.items && Array.isArray(suggestedData.items)) {
-              setSuggestedPosts(suggestedData.items); // 
+              setSuggestedPosts(suggestedData.items); //
             }
           } else {
-            console.log('No suggested posts available');
+            console.log("No suggested posts available");
             setSuggestedPosts([]);
           }
         } else {
-          console.error('Failed to fetch user:', userResponse.status);
+          console.error("Failed to fetch user:", userResponse.status);
           setUserPosts([]);
         }
       } catch (error) {
@@ -336,7 +341,12 @@ export default function Home() {
           <Row className="feed-row d-flex justify-content-start">
             {/* Display one suggested post (random post from other users) */}
             {Array.isArray(suggestedPosts) && suggestedPosts.length > 0 ? (
-              <PostCard key={`suggested-${suggestedPosts[0]._id || suggestedPosts[0].id}`} post={suggestedPosts[0]} />
+              <PostCard
+                key={`suggested-${
+                  suggestedPosts[0]._id || suggestedPosts[0].id
+                }`}
+                post={suggestedPosts[0]}
+              />
             ) : (
               <div>No suggested posts available</div>
             )}
@@ -351,8 +361,9 @@ export default function Home() {
                 />
               ))
             ) : (
-              <div style={{ color: '#666', fontStyle: 'italic' }}>
-                You're not following anyone yet. Go explore and follow some users!
+              <div style={{ color: "#666", fontStyle: "italic" }}>
+                You're not following anyone yet. Go explore and follow some
+                users!
               </div>
             )}
           </Row>
