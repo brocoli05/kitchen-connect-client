@@ -177,6 +177,50 @@ export default function CreatePost() {
                       ingredients || "N/A"
                     }\n\nInstructions:\n${stepsFormatted || "N/A"}`;
                     setValue("content", formatted, { shouldDirty: true });
+
+                // --- Autofill constraints from recipe details (non-destructive) ---
+                // Cooking Time
+                if (!time && typeof info.readyInMinutes === "number" && info.readyInMinutes > 0) {
+                  const minutes = String(info.readyInMinutes);
+                  setTime(minutes);
+                  setValue("time", minutes, { shouldDirty: true });
+                }
+
+                // Difficulty based on step count
+                const stepCount = Array.isArray(steps) ? steps.length : 0;
+                if (!difficulty && stepCount > 0) {
+                  const autoDiff = stepCount <= 4 ? "Easy" : stepCount <= 8 ? "Medium" : "Hard";
+                  setDifficulty(autoDiff);
+                  setValue("difficulty", autoDiff, { shouldDirty: true });
+                }
+
+                // Dietary tags from booleans
+                if (!dietary) {
+                  const tags = [];
+                  if (info.vegan) tags.push("vegan");
+                  if (info.vegetarian) tags.push("vegetarian");
+                  if (info.glutenFree) tags.push("gluten-free");
+                  if (info.dairyFree) tags.push("dairy-free");
+                  if (info.ketogenic) tags.push("keto");
+                  if (info.veryHealthy) tags.push("healthy");
+                  if (tags.length) {
+                    const tagStr = tags.join(", ");
+                    setDietary(tagStr);
+                    setValue("dietary", tagStr, { shouldDirty: true });
+                  }
+                }
+
+                // Include ingredients from ingredient names
+                if (!include) {
+                  const ingNames = (info.extendedIngredients || info.ingredients || [])
+                    .map((ing) => ing.name || ing.originalName || ing.original || "")
+                    .filter(Boolean);
+                  if (ingNames.length) {
+                    const includeStr = Array.from(new Set(ingNames)).join(", ");
+                    setInclude(includeStr);
+                    setValue("include", includeStr, { shouldDirty: true });
+                  }
+                }
                   } catch (err) {
                     console.error("Failed to fetch recipe details", err);
                   }

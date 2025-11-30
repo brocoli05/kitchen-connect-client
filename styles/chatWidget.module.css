@@ -58,6 +58,16 @@
   font-size: 13px;
 }
 
+.quick {
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
 .msgUser {
   background: #2563eb;
   color: #fff;
