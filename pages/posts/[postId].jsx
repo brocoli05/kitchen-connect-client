@@ -686,6 +686,57 @@ const [isAdmin, setIsAdmin] = useState(false);
           </div>
         )}
 
+        {/* Constraints & Preferences (read-only) */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+            gap: 8,
+            border: "1px solid #eee",
+            background: "#f9fafb",
+            padding: 12,
+            borderRadius: 8,
+            marginBottom: 12,
+          }}
+          aria-label="Recipe constraints and preferences"
+        >
+          <div style={{ fontSize: 13, color: "#374151" }}>
+            <strong style={{ display: "block", color: "#111827" }}>Cooking Time</strong>
+            {typeof post.timeMax === "number" && post.timeMax > 0 ? `${post.timeMax} min` : "—"}
+          </div>
+          <div style={{ fontSize: 13, color: "#374151" }}>
+            <strong style={{ display: "block", color: "#111827" }}>Difficulty</strong>
+            {post.difficulty || "—"}
+          </div>
+          <div style={{ fontSize: 13, color: "#374151" }}>
+            <strong style={{ display: "block", color: "#111827" }}>Dietary</strong>
+            {post.dietary ? (
+              <span
+                style={{
+                  display: "inline-block",
+                  background: "#e0f2fe",
+                  color: "#0369a1",
+                  border: "1px solid #bae6fd",
+                  borderRadius: 9999,
+                  padding: "2px 8px",
+                }}
+              >
+                {post.dietary}
+              </span>
+            ) : (
+              "—"
+            )}
+          </div>
+          <div style={{ fontSize: 13, color: "#374151" }}>
+            <strong style={{ display: "block", color: "#111827" }}>Include</strong>
+            {post.includeIngredients || "—"}
+          </div>
+          <div style={{ fontSize: 13, color: "#374151" }}>
+            <strong style={{ display: "block", color: "#111827" }}>Exclude</strong>
+            {post.excludeIngredients || "—"}
+          </div>
+        </div>
+
         <article
           style={{
             whiteSpace: "pre-wrap",
