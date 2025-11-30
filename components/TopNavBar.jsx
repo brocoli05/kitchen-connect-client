@@ -46,7 +46,8 @@ export default function TopNavBar({}) {
               style={iconButtonStyle}
               onClick={() => router.push("/history")}
             >
-              👣
+              👣Include
+chickenkosher saltground pepperolive oilonioncelerygarlic clovesbay leavesthymelemon juice
             </button>
           <button
             onClick={() => router.push("/profile/edit")}

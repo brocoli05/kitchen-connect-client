@@ -263,12 +263,15 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         setCurrentUser(data);
-        if (
-          data &&
-          post?.authorId &&
-          String(data.id) === String(post.authorId)
-        ) {
+        const postAuthorId =
+          post?.authorId ??
+          post?.author?.id ??
+          post?.author?._id ??
+          post?.authorId;
+        if (data && postAuthorId && String(data.id) === String(postAuthorId)) {
           setIsOwner(true);
+        } else {
+          setIsOwner(false);
         }
         if (data && (data.role === "admin" || data.isAdmin === true)) {
           setIsAdmin(true);
@@ -822,36 +825,6 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
           </div>
         )}
 
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 12,
-            margin: "16px 0",
-          }}
-        >
-          <div style={metaCardStyle}>
-            <div style={metaLabelStyle}>Cooking Time</div>
-            <div style={metaValueStyle}>{cookingTimeLabel}</div>
-          </div>
-          <div style={metaCardStyle}>
-            <div style={metaLabelStyle}>Difficulty</div>
-            <div style={metaValueStyle}>{difficultyLabel}</div>
-          </div>
-          <div style={metaCardStyle}>
-            <div style={metaLabelStyle}>Dietary</div>
-            <div style={metaValueStyle}>{dietaryLabel}</div>
-          </div>
-          <div style={metaCardStyle}>
-            <div style={metaLabelStyle}>Include</div>
-            <div style={metaValueStyle}>{includeDisplay}</div>
-          </div>
-          <div style={metaCardStyle}>
-            <div style={metaLabelStyle}>Exclude</div>
-            <div style={metaValueStyle}>{excludeDisplay}</div>
-          </div>
-        </div>
-
         {/* Constraints & Preferences (read-only) */}
         <div
           style={{
@@ -895,11 +868,11 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
           </div>
           <div style={{ fontSize: 13, color: "#374151" }}>
             <strong style={{ display: "block", color: "#111827" }}>Include</strong>
-            {post.includeIngredients || "—"}
+            {includeDisplay || "—"}
           </div>
           <div style={{ fontSize: 13, color: "#374151" }}>
             <strong style={{ display: "block", color: "#111827" }}>Exclude</strong>
-            {post.excludeIngredients || "—"}
+            {excludeDisplay || "—"}
           </div>
         </div>
 
