@@ -1,13 +1,71 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Row, Col } from "react-bootstrap";
+import { signOut } from "next-auth/react";
 
-// Define the sidebar menu items
+const ProfileLayout = ({ children }) => {
+
+  const router = useRouter();
+  const [aiDisabled, setAiDisabled] = useState(false);
+
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem("aiDisabled");
+      setAiDisabled(v === "true");
+    } catch {}
+  }, []);
+  // handleLogout must be inside the component
+  const handleLogout = async () => {
+    const ok = window.confirm("Log out of your account?");
+    if (!ok) return;
+    try {
+      const token = localStorage.getItem("userToken");
+
+      await fetch("/api/users/logout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      await signOut({ redirect: false });
+      localStorage.removeItem("userToken");
+
+      router.push("/login"); // router is in scope
+    } catch (error) {
+      console.error("Logout error:", error);
+      localStorage.removeItem("userToken");
+      router.push("/login"); // router is in scope
+    }
+  };
+  const handleToggleAI = () => {
+    const newVal = !aiDisabled;
+    const ok = window.confirm(
+      newVal
+        ? "Disable AI features across the app? You can re-enable later."
+        : "Re-enable AI features across the app?"
+    );
+    if (!ok) return;
+    try {
+      if (newVal) {
+        localStorage.setItem("aiDisabled", "true");
+        setAiDisabled(true);
+        alert("AI features disabled for this browser.");
+      } else {
+        localStorage.removeItem("aiDisabled");
+        setAiDisabled(false);
+        alert("AI features re-enabled.");
+      }
+    } catch (e) {
+      alert("Failed to update AI setting. Please try again.");
+    }
+  };
 const menuItems = [
+  { name: "Notifications", path: "/profile/notifications" },
   { name: "Edit Information", path: "/profile/edit" },
   { name: "Change Password", path: "/profile/change-password" },
   { name: "Delete Account", path: "/profile/delete" },
+  { name: aiDisabled ? "Enable AI" : "Disable AI", onClick: handleToggleAI },
+  { name: "Log Out", onClick: handleLogout },
 ];
 
 const ProfileLayout = ({ children, user }) => {
@@ -18,7 +76,7 @@ const ProfileLayout = ({ children, user }) => {
       {/* Left Sidebar */}
       <Col md={2} className="mainpage-left">
         <aside>
-          <p className="left-right-title">Profile</p>
+          <p className="left-right-title">Settings</p>
           <nav>
             <ul>
               {menuItems

@@ -2,62 +2,33 @@
 import Link from "next/link";
 import CommentSection from "@/components/CommentSection";
 import ChatWidget from "@/components/ChatWidget";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import api from "../../utils/api";
 import TopNavBar from "@/components/TopNavBar";
 import { Row, Col } from "react-bootstrap";
 import st from "@/styles/createPost.module.css";
-import Head from "next/head";
-
-
-// Social Media Share URL Helper
-const getSocialShareUrls = (title, url) => {
-  const encodedTitle = encodeURIComponent(title);
-  const encodedUrl = encodeURIComponent(url);
-
-  return {
-    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedTitle}`,
-    twitter: `https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`,
-    instagram: `https://www.instagram.com/`,
-  };
-};
-
-// Web Share API implementation
-const sharePost = async (title, url, onFallbackNeeded) => {
-  if (navigator.share) {
-    try {
-      await navigator.share({
-        title: title,
-        url: url,
-      });
-      console.log("Post shared successfully via Web Share API");
-    } catch (error) {
-      // Check for AbortError (user cancelled)
-      if (error.name !== "AbortError") {
-        console.error("Error sharing:", error);
-      }
-    }
-  } else {
-    // If Web Share API is not supported, trigger fallback UI
-    onFallbackNeeded();
-  }
-};
-
-const GEOLOCATION_TIMEOUT = 8000;
 
 export default function PostPage({ post, notFound, postIdFromProps }) {
   const postId = post?.id;
   const router = useRouter();
 
-  const likingRef = useRef(false);
+  if (notFound || !post) {
+    return (
+      <>
+        <TopNavBar />
+        <div style={{ textAlign: 'center', padding: '50px' }}>
+          <h1>Post not found</h1>
+          <p>The post you're looking for doesn't exist.</p>
+          <Link href="/">Go back home</Link>
+        </div>
+      </>
+    );
+  }
+
   const [currentUser, setCurrentUser] = useState(null);
   const [isOwner, setIsOwner] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(typeof post.likeCount === "number" ? post.likeCount : 0);
   const [isEditing, setIsEditing] = useState(false);
-  const [isReposted, setIsReposted] = useState(false);
-  const [repostCount, setRepostCount] = useState(typeof post.repostCount === "number" ? post.repostCount : 0);
   const [form, setForm] = useState({
     title: post.title || "",
     content: post.content || "",
@@ -65,103 +36,7 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   const [errors, setErrors] = useState({});
   const [isFavorited, setIsFavorited] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
-  const [showShareOptions, setShowShareOptions] = useState(false);
-  const currentUrl =
-    typeof window !== "undefined"
-      ? window.location.href
-      : `https://kitchen-connect-client.vercel.app/posts/${postIdFromProps}`;
-  const shareUrls = getSocialShareUrls(post.title, currentUrl);
 
-
-  // Repost
-  useEffect(() => {
-    const token = localStorage.getItem("userToken");
-    if (!token) return;
-
-    (async () => {
-      try {
-        const res = await api.get(
-          `/posts/${postIdFromProps}/repost`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setIsReposted(!!res.data.isReposted);
-        setRepostCount(typeof res.data.repostCount === "number" ? res.data.repostCount : 0);
-      } catch (e) {
-        console.warn("fetchRepostStatus failed", e?.response?.status);
-      }
-    })();
-  }, [postIdFromProps]); 
-
-  const handleRepost = async () => {
-    const token = localStorage.getItem("userToken");
-    if (!token) {
-      alert("Please log in to repost this.");
-      return;
-    }
-
-    const prev = { isReposted, repostCount };
-    // Optimistic UI
-    setIsReposted(!isReposted);
-    setRepostCount((c) => c + (isReposted ? -1 : 1));
-
-    try {
-      const res = await api.post(`posts/${postIdFromProps}/repost`, null, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setIsReposted(!!res.data.isReposted);
-      if (typeof res.data.repostCount === "number") {
-        setRepostCount(res.data.repostCount);
-      }
-    } catch (e) {
-      // rollback
-      setIsReposted(prev.isReposted);
-      setRepostCount(prev.repostCount);
-      alert("Failed to update repost. Please try again.");
-    }
-  };
-
-
-  // Like
-  useEffect(() => {
-    const token = localStorage.getItem("userToken");
-    if (!token) return;
-  
-    (async () => {
-      try {
-        const res = await api.get(
-          `/posts/${postIdFromProps}/isLike`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setIsLiked(!!res.data.isLiked);
-        setLikeCount(typeof res.data.likeCount === "number" ? res.data.likeCount : 0);
-      } catch (e) {
-        console.warn("fetchLikeStatus failed", e?.response?.status);
-       
-      }
-    })();
-  }, [postIdFromProps]);
-
-  const handleLike = async () => {
-    const token = localStorage.getItem("userToken");
-    if (!token) {
-      alert("Please log in to like this post.");
-      return;
-    }
-    const prev = { isLiked, likeCount };
-    setIsLiked(!isLiked);
-    setLikeCount((c) => c + (isLiked ? -1 : 1));
-    try {
-      const res = await api.post(`posts/${postIdFromProps}/isLike`, null, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setIsLiked(!!res.data.isLiked);
-      if (typeof res.data.likeCount === "number") setLikeCount(res.data.likeCount);
-    } catch (e) {
-      setIsLiked(prev.isLiked);
-      setLikeCount(prev.likeCount);
-      alert("Failed to update like. Please try again.");
-    }
-  };
   useEffect(() => {
     const token =
       typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
@@ -171,7 +46,11 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         setCurrentUser(data);
-        if (data && post?.authorId && String(data.id) === String(post.authorId)) {
+        if (
+          data &&
+          post?.authorId &&
+          String(data.id) === String(post.authorId)
+        ) {
           setIsOwner(true);
         }
       })
@@ -255,50 +134,6 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
     const fileInput = document.getElementById("imageUpload");
     if (fileInput) {
       fileInput.value = "";
-    }
-  };
-
-  // Open Google Maps directly. If geolocation is available and permitted, center on user's location.
-  const openGoogleMaps = (query = "grocery store") => {
-    const q = encodeURIComponent(query || "grocery store");
-
-    const openUrl = (lat, lng) => {
-      let url;
-      if (lat != null && lng != null) {
-        url = `https://www.google.com/maps/search/${q}/@${lat},${lng},14z`;
-      } else {
-        url = `https://www.google.com/maps/search/${q}`;
-      }
-      window.open(url, "_blank");
-    };
-
-    if (typeof navigator !== "undefined" && navigator.geolocation) {
-      const called = { v: false };
-      const timer = setTimeout(() => {
-        if (!called.v) {
-          called.v = true;
-          openUrl(); // fallback without coords
-        }
-      }, GEOLOCATION_TIMEOUT);
-
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          if (called.v) return;
-          called.v = true;
-          clearTimeout(timer);
-          openUrl(pos.coords.latitude, pos.coords.longitude);
-        },
-        (err) => {
-          if (called.v) return;
-          called.v = true;
-          clearTimeout(timer);
-          openUrl();
-        },
-        { enableHighAccuracy: true, timeout: 7000 }
-      );
-    } else {
-      // No geolocation available
-      openUrl();
     }
   };
   const startEdit = () => {
@@ -402,46 +237,6 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
     checkFavorite();
   }, [postIdFromProps]);
 
-  // Record a 'view' activity for this post in the user's history.
-  // Prevent duplicate records when navigating back/forward by
-  // remembering viewed posts in sessionStorage for the browser session.
-  useEffect(() => {
-    const recordView = async () => {
-      if (typeof window === "undefined") return;
-
-      // Only send once per browser session for this postId
-      const sessionKey = `viewed_post_${postIdFromProps}`;
-      try {
-        if (sessionStorage.getItem(sessionKey)) return;
-      } catch (e) {
-        // sessionStorage might be unavailable in some environments; swallow
-      }
-
-      const token = localStorage.getItem("userToken");
-      if (!token) return;
-
-      try {
-        await api.post("/users/history", {
-          type: "view",
-          postId: postIdFromProps,
-          title: post.title || null,
-        });
-
-        // mark as recorded for this session so back-button won't re-send
-        try {
-          sessionStorage.setItem(sessionKey, String(Date.now()));
-        } catch (e) {
-          // ignore storage errors
-        }
-      } catch (e) {
-        // don't block page load if recording fails
-        console.error("Failed to record view history", e);
-      }
-    };
-
-    if (router.isReady) recordView();
-  }, [postIdFromProps, post.title, router.isReady]);
-
   const handleSaveButton = async () => {
     const token = localStorage.getItem("userToken");
     if (!token) {
@@ -460,26 +255,6 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
 
   return (
     <>
-      <Head>
-        <title>{post.title}</title>
-        {/* Ensure your live domain is used here for absolute URLs */}
-        <meta property="og:title" content={post.title} />
-        <meta
-          property="og:description"
-          content={post.content.substring(0, 150) + "..."}
-        />
-        <meta property="og:url" content={currentUrl} />
-        {/* Replace YOUR_DEFAULT_IMAGE_URL with your absolute image path */}
-        <meta
-          property="og:image"
-          content={
-            post.photo ||
-            "https://kitchen-connect-client.vercel.app/images/default-recipe.png"
-          }
-        />
-        <meta property="og:type" content="article" />
-        <meta name="twitter:card" content="summary_large_image" />
-      </Head>
       <TopNavBar />
       <div style={{ maxWidth: 820, margin: "72px auto", padding: "0 16px" }}>
         <Link href="/">← Back</Link>
@@ -506,192 +281,20 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
               })}
             </p>
             <button
-            type="button"                  
-            onClick={async () => {
-              if (likingRef.current) return;  
-              likingRef.current = true;
-
-              const token = localStorage.getItem("userToken");
-              if (!token) {
-                
-                console.warn("Please log in to like this post");
-                likingRef.current = false;
-                return;
-              }
-
-              try {
-              
-                const res = await api.post(
-                  `/posts/${postIdFromProps}/isLike`,
-                  null,
-                  { headers: { Authorization: `Bearer ${token}` } }
-                );
-
-                if (res?.data) {
-                  setIsLiked(!!res.data.isLiked);
-                  if (typeof res.data.likeCount === "number") setLikeCount(res.data.likeCount);
-                }
-              } catch (err) {
-                console.error("like failed:", err?.response?.status, err?.response?.data || err.message);
-                
-              } finally {
-                likingRef.current = false;
-              }
-            }}
-            style={{
-              padding: "8px 16px",
-              fontSize: 16,
-              border: "1px solid #333",
-              borderRadius: 4,
-              backgroundColor: isLiked ? "#e11d48" : "#fff",
-              color: isLiked ? "#fff" : "#333",
-              cursor: "pointer",
-              fontWeight: isLiked ? "bold" : "normal",
-            }}
-          >
-            ❤️ {isLiked ? "Liked" : "Like"}{typeof likeCount === "number" ? ` (${likeCount})` : ""}
-          </button>
-          <button
-            type="button"
-            onClick={handleRepost}
-            disabled={isOwner}                
-            title={isOwner ? "You cannot repost your own post" : ""}
-            style={{
-              padding: "8px 16px",
-              fontSize: 16,
-              border: "1px solid #333",
-              borderRadius: 4,
-              backgroundColor: isReposted ? "#0ea5e9" : "#fff",
-              color: isOwner ? "#aaa" : (isReposted ? "#fff" : "#333"),
-              cursor: isOwner ? "not-allowed" : "pointer",
-              fontWeight: isReposted ? "bold" : "normal",
-              marginLeft: 8,
-              opacity: isOwner ? 0.6 : 1,
-            }}
-          >
-            🔁 {isReposted ? "Reposted" : "Repost"}
-            {typeof repostCount === "number" ? ` (${repostCount})` : ""}
-          </button>
-            <div style={{ display: "flex", gap: 8, position: "relative" }}>
-              {/* Save Button */}
-              <button
-                onClick={handleSaveButton}
-                style={{
-                  padding: "8px 16px",
-                  fontSize: 16,
-                  border: "1px solid #333",
-                  borderRadius: 4,
-                  backgroundColor: isFavorited ? "#333" : "#fff",
-                  color: isFavorited ? "#fff" : "#333",
-                  cursor: "pointer",
-                  fontWeight: isFavorited ? "bold" : "normal",
-                }}
-              >
-                {isFavorited ? "Saved" : "Save"}
-              </button>
-
-              {/* Share Button */}
-              <button
-                onClick={() => {
-                  // Try Web Share API first; fallback to popover
-                  sharePost(post.title, currentUrl, () =>
-                    setShowShareOptions(!showShareOptions)
-                  );
-                }}
-                style={{
-                  padding: "8px 16px",
-                  fontSize: 16,
-                  border: "1px solid #333",
-                  borderRadius: 4,
-                  cursor: "pointer",
-                  backgroundColor: "#fff",
-                }}
-              >
-                🔗 Share
-              </button>
-
-              {/* Share Options Popover */}
-              {showShareOptions && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "100%",
-                    right: 0,
-                    zIndex: 10,
-                    border: "1px solid #ddd",
-                    backgroundColor: "white",
-                    padding: "10px",
-                    borderRadius: "4px",
-                    boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-                    minWidth: "150px",
-                  }}
-                >
-                  <a
-                    href={shareUrls.facebook}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setShowShareOptions(false)}
-                    style={{
-                      display: "block",
-                      padding: "5px 0",
-                      textDecoration: "none",
-                      color: "#3b5998",
-                    }}
-                  >
-                    📘 Share on <b>Facebook</b>
-                  </a>
-                  <a
-                    href={shareUrls.twitter}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setShowShareOptions(false)}
-                    style={{
-                      display: "block",
-                      padding: "5px 0",
-                      textDecoration: "none",
-                      color: "#1da1f2",
-                    }}
-                  >
-                    🐦 Share on <b>X (Twitter)</b>
-                  </a>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(currentUrl);
-                      alert(
-                        "🔗 Link copied! You can now paste it into your Instagram story or bio."
-                      );
-                      window.open(shareUrls.instagram, "_blank");
-                      setShowShareOptions(false);
-                    }}
-                    style={{
-                      all: "unset",
-                      display: "block",
-                      padding: "5px 0",
-                      cursor: "pointer",
-                      color: "#E4405F",
-                    }}
-                  >
-                    📸 Share on <b>Instagram</b>
-                  </button>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(currentUrl);
-                      alert("Link copied to clipboard!");
-                      setShowShareOptions(false);
-                    }}
-                    style={{
-                      all: "unset",
-                      display: "block",
-                      padding: "5px 0",
-                      cursor: "pointer",
-                      color: "#333",
-                    }}
-                  >
-                    📋 <b>Copy Link</b>
-                  </button>
-                </div>
-              )}
-            </div>
+              onClick={handleSaveButton}
+              style={{
+                padding: "8px 16px",
+                fontSize: 16,
+                border: "1px solid #333",
+                borderRadius: 4,
+                backgroundColor: isFavorited ? "#333" : "#fff",
+                color: isFavorited ? "#fff" : "#333",
+                cursor: "pointer",
+                fontWeight: isFavorited ? "bold" : "normal",
+              }}
+            >
+              {isFavorited ? "Saved" : "Save"}
+            </button>
           </div>
         )}
 
@@ -862,28 +465,13 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
         )}
 
         {/* --- COMMENT section --- */}
-        <div style={{ margin: "12px 0" }}>
-          <button
-            onClick={() => openGoogleMaps()}
-            style={{
-              background: '#2563eb',
-              color: '#fff',
-              padding: '8px 12px',
-              border: 'none',
-              borderRadius: 6,
-              cursor: 'pointer'
-            }}
-          >
-            Find nearby stores
-          </button>
-        </div>
         <hr style={{ margin: "40px 0", borderTop: "1px solid #ddd" }} />
 
         <section className="comments-section">
           <h2 style={{ marginBottom: 20 }}>Comments</h2>
           {postId && <CommentSection postId={postId} />}
         </section>
-        {/* Chat widget (floating) */}
+        {/* Floating chat widget (respects AI disable flag) */}
         <ChatWidget contextId={postId} />
       </div>
     </>
