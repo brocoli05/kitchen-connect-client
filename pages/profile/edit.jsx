@@ -1,10 +1,14 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
+import dynamic from "next/dynamic";
 import s from "@/styles/profile-edit.module.css";
 import TopNavBar from "@/components/TopNavBar";
 import ProfileLayout from "../../components/ProfileLayout";
-import AvatarEditor from "react-avatar-editor";
 import { useProfile } from "@/context/ProfileContext";
+
+const AvatarEditor = dynamic(() => import("react-avatar-editor"), {
+  ssr: false,
+});
 
 export default function ProfileEditPage() {
   const router = useRouter();
