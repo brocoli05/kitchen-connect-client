@@ -2,12 +2,49 @@
 import Link from "next/link";
 import CommentSection from "@/components/CommentSection";
 import ChatWidget from "@/components/ChatWidget";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import api from "../../utils/api";
 import TopNavBar from "@/components/TopNavBar";
 import { Row, Col } from "react-bootstrap";
 import st from "@/styles/createPost.module.css";
+import Head from "next/head";
+import ReportPostModal from "@/components/ReportPostModal";
+
+// Social Media Share URL Helper
+const getSocialShareUrls = (title, url) => {
+  const encodedTitle = encodeURIComponent(title);
+  const encodedUrl = encodeURIComponent(url);
+
+  return {
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedTitle}`,
+    twitter: `https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`,
+    instagram: `https://www.instagram.com/`,
+  };
+};
+
+// Web Share API implementation
+const sharePost = async (title, url, onFallbackNeeded) => {
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: title,
+        url: url,
+      });
+      console.log("Post shared successfully via Web Share API");
+    } catch (error) {
+      // Check for AbortError (user cancelled)
+      if (error.name !== "AbortError") {
+        console.error("Error sharing:", error);
+      }
+    }
+  } else {
+    // If Web Share API is not supported, trigger fallback UI
+    onFallbackNeeded();
+  }
+};
+
+const GEOLOCATION_TIMEOUT = 8000;
 
 export default function PostPage({ post, notFound, postIdFromProps }) {
   const postId = post?.id;
@@ -36,7 +73,113 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   const [errors, setErrors] = useState({});
   const [isFavorited, setIsFavorited] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [showShareOptions, setShowShareOptions] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [isReposted, setIsReposted] = useState(false);
+  const [repostCount, setRepostCount] = useState(0);
+  const likingRef = useRef(false);
+  const currentUrl =
+    typeof window !== "undefined"
+      ? window.location.href
+      : `https://kitchen-connect-client.vercel.app/posts/${postIdFromProps}`;
+  const shareUrls = getSocialShareUrls(post.title, currentUrl);
 
+  const [showReportModal, setShowReportModal] = useState(false);
+const [blocking, setBlocking] = useState(false);
+const [blockedPost, setBlockedPost] = useState(false);   
+const [blockedAuthor, setBlockedAuthor] = useState(false);
+const [isAdmin, setIsAdmin] = useState(false);
+
+  // Repost
+  useEffect(() => {
+    const token = localStorage.getItem("userToken");
+    if (!token) return;
+
+    (async () => {
+      try {
+        const res = await api.get(
+          `/posts/${postIdFromProps}/repost`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setIsReposted(!!res.data.isReposted);
+        setRepostCount(typeof res.data.repostCount === "number" ? res.data.repostCount : 0);
+      } catch (e) {
+        console.warn("fetchRepostStatus failed", e?.response?.status);
+      }
+    })();
+  }, [postIdFromProps]); 
+
+  const handleRepost = async () => {
+    const token = localStorage.getItem("userToken");
+    if (!token) {
+      alert("Please log in to repost this.");
+      return;
+    }
+
+    const prev = { isReposted, repostCount };
+    // Optimistic UI
+    setIsReposted(!isReposted);
+    setRepostCount((c) => c + (isReposted ? -1 : 1));
+
+    try {
+      const res = await api.post(`posts/${postIdFromProps}/repost`, null, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setIsReposted(!!res.data.isReposted);
+      if (typeof res.data.repostCount === "number") {
+        setRepostCount(res.data.repostCount);
+      }
+    } catch (e) {
+      // rollback
+      setIsReposted(prev.isReposted);
+      setRepostCount(prev.repostCount);
+      alert("Failed to update repost. Please try again.");
+    }
+  };
+
+
+  // Like
+  useEffect(() => {
+    const token = localStorage.getItem("userToken");
+    if (!token) return;
+  
+    (async () => {
+      try {
+        const res = await api.get(
+          `/posts/${postIdFromProps}/isLike`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setIsLiked(!!res.data.isLiked);
+        setLikeCount(typeof res.data.likeCount === "number" ? res.data.likeCount : 0);
+      } catch (e) {
+        console.warn("fetchLikeStatus failed", e?.response?.status);
+       
+      }
+    })();
+  }, [postIdFromProps]);
+
+  const handleLike = async () => {
+    const token = localStorage.getItem("userToken");
+    if (!token) {
+      alert("Please log in to like this post.");
+      return;
+    }
+    const prev = { isLiked, likeCount };
+    setIsLiked(!isLiked);
+    setLikeCount((c) => c + (isLiked ? -1 : 1));
+    try {
+      const res = await api.post(`posts/${postIdFromProps}/isLike`, null, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setIsLiked(!!res.data.isLiked);
+      if (typeof res.data.likeCount === "number") setLikeCount(res.data.likeCount);
+    } catch (e) {
+      setIsLiked(prev.isLiked);
+      setLikeCount(prev.likeCount);
+      alert("Failed to update like. Please try again.");
+    }
+  };
   useEffect(() => {
     const token =
       typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
@@ -52,6 +195,9 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
           String(data.id) === String(post.authorId)
         ) {
           setIsOwner(true);
+        }
+        if (data && (data.role === "admin" || data.isAdmin === true)) {
+          setIsAdmin(true);
         }
       })
       .catch(() => {});
@@ -280,21 +426,263 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
                 hour12: true,
               })}
             </p>
+            {/* Report button */}
             <button
-              onClick={handleSaveButton}
+              type="button"
+              onClick={() => setShowReportModal(true)}
               style={{
                 padding: "8px 16px",
                 fontSize: 16,
-                border: "1px solid #333",
+                border: "1px solid #dc2626",
                 borderRadius: 4,
-                backgroundColor: isFavorited ? "#333" : "#fff",
-                color: isFavorited ? "#fff" : "#333",
+                backgroundColor: "#fff",
+                color: "#dc2626",
                 cursor: "pointer",
-                fontWeight: isFavorited ? "bold" : "normal",
               }}
             >
-              {isFavorited ? "Saved" : "Save"}
+              🚩 Report
             </button>
+
+  {/* Block post (toggle) */}
+  <button
+    type="button"
+    disabled={blocking}
+    onClick={async () => {
+      const token =
+        typeof window !== "undefined"
+          ? localStorage.getItem("userToken")
+          : null;
+      if (!token) {
+        alert("Please log in to block posts.");
+        return;
+      }
+      setBlocking(true);
+      try {
+        const res = await fetch(`/api/posts/${postIdFromProps}/block`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ scope: "post" }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.message || "Failed to update block.");
+        } else {
+          setBlockedPost(data.blocked);
+          alert(
+            data.blocked
+              ? "This post is now blocked and will be hidden from your feed."
+              : "This post is unblocked."
+          );
+        }
+      } catch (e) {
+        console.error("block post failed", e);
+        alert("Failed to block post.");
+      } finally {
+        setBlocking(false);
+      }
+    }}
+    style={{
+      padding: "8px 16px",
+      fontSize: 16,
+      border: "1px solid #6b7280",
+      borderRadius: 4,
+      backgroundColor: blockedPost ? "#6b7280" : "#fff",
+      color: blockedPost ? "#fff" : "#374151",
+      cursor: blocking ? "default" : "pointer",
+    }}
+  >
+    {blockedPost ? "Blocked post" : "Block post"}
+  </button>
+            <button
+            type="button"                  
+            onClick={async () => {
+              if (likingRef.current) return;  
+              likingRef.current = true;
+
+              const token = localStorage.getItem("userToken");
+              if (!token) {
+                
+                console.warn("Please log in to like this post");
+                likingRef.current = false;
+                return;
+              }
+
+              try {
+              
+                const res = await api.post(
+                  `/posts/${postIdFromProps}/isLike`,
+                  null,
+                  { headers: { Authorization: `Bearer ${token}` } }
+                );
+
+                if (res?.data) {
+                  setIsLiked(!!res.data.isLiked);
+                  if (typeof res.data.likeCount === "number") setLikeCount(res.data.likeCount);
+                }
+              } catch (err) {
+                console.error("like failed:", err?.response?.status, err?.response?.data || err.message);
+                
+              } finally {
+                likingRef.current = false;
+              }
+            }}
+            style={{
+              padding: "8px 16px",
+              fontSize: 16,
+              border: "1px solid #333",
+              borderRadius: 4,
+              backgroundColor: isLiked ? "#e11d48" : "#fff",
+              color: isLiked ? "#fff" : "#333",
+              cursor: "pointer",
+              fontWeight: isLiked ? "bold" : "normal",
+            }}
+          >
+            ❤️ {isLiked ? "Liked" : "Like"}{typeof likeCount === "number" ? ` (${likeCount})` : ""}
+          </button>
+          <button
+            type="button"
+            onClick={handleRepost}
+            disabled={isOwner}                
+            title={isOwner ? "You cannot repost your own post" : ""}
+            style={{
+              padding: "8px 16px",
+              fontSize: 16,
+              border: "1px solid #333",
+              borderRadius: 4,
+              backgroundColor: isReposted ? "#0ea5e9" : "#fff",
+              color: isOwner ? "#aaa" : (isReposted ? "#fff" : "#333"),
+              cursor: isOwner ? "not-allowed" : "pointer",
+              fontWeight: isReposted ? "bold" : "normal",
+              marginLeft: 8,
+              opacity: isOwner ? 0.6 : 1,
+            }}
+          >
+            🔁 {isReposted ? "Reposted" : "Repost"}
+            {typeof repostCount === "number" ? ` (${repostCount})` : ""}
+          </button>
+            <div style={{ display: "flex", gap: 8, position: "relative" }}>
+              {/* Save Button */}
+              <button
+                onClick={handleSaveButton}
+                style={{
+                  padding: "8px 16px",
+                  fontSize: 16,
+                  border: "1px solid #333",
+                  borderRadius: 4,
+                  backgroundColor: isFavorited ? "#333" : "#fff",
+                  color: isFavorited ? "#fff" : "#333",
+                  cursor: "pointer",
+                  fontWeight: isFavorited ? "bold" : "normal",
+                }}
+              >
+                {isFavorited ? "Saved" : "Save"}
+              </button>
+
+              {/* Share Button */}
+              <button
+                onClick={() => {
+                  // Try Web Share API first; fallback to popover
+                  sharePost(post.title, currentUrl, () =>
+                    setShowShareOptions(!showShareOptions)
+                  );
+                }}
+                style={{
+                  padding: "8px 16px",
+                  fontSize: 16,
+                  border: "1px solid #333",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  backgroundColor: "#fff",
+                }}
+              >
+                🔗 Share
+              </button>
+
+              {/* Share Options Popover */}
+              {showShareOptions && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    right: 0,
+                    zIndex: 10,
+                    border: "1px solid #ddd",
+                    backgroundColor: "white",
+                    padding: "10px",
+                    borderRadius: "4px",
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+                    minWidth: "150px",
+                  }}
+                >
+                  <a
+                    href={shareUrls.facebook}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowShareOptions(false)}
+                    style={{
+                      display: "block",
+                      padding: "5px 0",
+                      textDecoration: "none",
+                      color: "#3b5998",
+                    }}
+                  >
+                    📘 Share on <b>Facebook</b>
+                  </a>
+                  <a
+                    href={shareUrls.twitter}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowShareOptions(false)}
+                    style={{
+                      display: "block",
+                      padding: "5px 0",
+                      textDecoration: "none",
+                      color: "#1da1f2",
+                    }}
+                  >
+                    🐦 Share on <b>X (Twitter)</b>
+                  </a>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(currentUrl);
+                      alert(
+                        "🔗 Link copied! You can now paste it into your Instagram story or bio."
+                      );
+                      window.open(shareUrls.instagram, "_blank");
+                      setShowShareOptions(false);
+                    }}
+                    style={{
+                      all: "unset",
+                      display: "block",
+                      padding: "5px 0",
+                      cursor: "pointer",
+                      color: "#E4405F",
+                    }}
+                  >
+                    📸 Share on <b>Instagram</b>
+                  </button>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(currentUrl);
+                      alert("Link copied to clipboard!");
+                      setShowShareOptions(false);
+                    }}
+                    style={{
+                      all: "unset",
+                      display: "block",
+                      padding: "5px 0",
+                      cursor: "pointer",
+                      color: "#333",
+                    }}
+                  >
+                    📋 <b>Copy Link</b>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -524,8 +912,14 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
         </section>
         {/* Floating chat widget (respects AI disable flag) */}
         <ChatWidget contextId={postId} />
+        <ReportPostModal
+          postId={postIdFromProps}
+          open={showReportModal}
+          onClose={() => setShowReportModal(false)}
+        />
       </div>
     </>
+    
   );
 }
 

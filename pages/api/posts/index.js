@@ -1,5 +1,7 @@
 // pages/api/posts/index.js
 import clientPromise from "@/lib/mongodb";
+import jwt from "jsonwebtoken";          
+import { ObjectId } from "mongodb";
 
 /** Build a safe case-insensitive regex */
 function rx(s) {
@@ -87,6 +89,43 @@ export default async function handler(req, res) {
         ...(filter.$and || []),
         ...exc.map((word) => ({ excludeIngredients: { $regex: rx(word) } })),
       ];
+    }
+
+    // ---- Visibility & per-user blocking ----
+
+    // Do not show globally hidden posts in this feed
+    filter.hidden = { $ne: true };
+
+    // Exclude posts that the current user has blocked
+    const auth = req.headers.authorization;
+    const token = auth?.split(" ")[1];
+
+    let blockedIds = [];
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const clientForUser = await clientPromise;
+        const dbForUser = clientForUser.db(process.env.MONGODB_DB);
+
+        const me = await dbForUser
+          .collection("users")
+          .findOne(
+            { _id: new ObjectId(decoded.userId) },
+            { projection: { blockedPosts: 1 } }
+          );
+
+        if (me?.blockedPosts?.length) {
+          blockedIds = me.blockedPosts.map((id) => new ObjectId(id));
+        }
+      } catch (err) {
+        // If token is invalid/expired we just ignore blocking and show regular feed
+        console.warn("Failed to read blocked posts:", err.message);
+      }
+    }
+
+    if (blockedIds.length > 0) {
+      // Exclude posts whose _id is in the user's blockedPosts list
+      filter._id = { $nin: blockedIds };
     }
 
     // ---- Sorting ----
