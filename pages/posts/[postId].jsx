@@ -152,10 +152,6 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
   const [isFavorited, setIsFavorited] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [showShareOptions, setShowShareOptions] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
-  const [isReposted, setIsReposted] = useState(false);
-  const [repostCount, setRepostCount] = useState(0);
   const likingRef = useRef(false);
   const currentUrl =
     typeof window !== "undefined"
