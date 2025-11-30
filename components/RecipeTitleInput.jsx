@@ -10,7 +10,16 @@ export default function RecipeTitleInput({ value = "", onSelect = () => {}, plac
   }, [value]);
 
   useEffect(() => {
-    if (!title || title.length < 3) {
+    // Respect AI disable flag: skip autocomplete
+    const disabled = (() => {
+      try {
+        return localStorage.getItem("aiDisabled") === "true";
+      } catch {
+        return false;
+      }
+    })();
+
+    if (disabled || !title || title.length < 3) {
       setSuggestions([]);
       return;
     }
@@ -66,6 +75,18 @@ export default function RecipeTitleInput({ value = "", onSelect = () => {}, plac
           ))}
         </ul>
       )}
+      {(() => {
+        try {
+          if (localStorage.getItem("aiDisabled") === "true") {
+            return (
+              <div style={{ marginTop: 6, fontSize: 12, color: "#7f1d1d" }}>
+                Autocomplete disabled by profile setting.
+              </div>
+            );
+          }
+        } catch {}
+        return null;
+      })()}
     </div>
   );
 }
