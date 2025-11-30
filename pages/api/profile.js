@@ -35,6 +35,7 @@ export default async function handler(req, res) {
         firstName: user.firstName || "",
         lastName: user.lastName || "",
         phone: user.phone || "",
+        googleId: user.googleId ?? null,
       });
     } else if (req.method === "PUT") {
       // Update user profile
@@ -164,6 +165,7 @@ export default async function handler(req, res) {
         firstName: updatedUser.firstName || "",
         lastName: updatedUser.lastName || "",
         phone: updatedUser.phone || "",
+        googleId: updatedUser.googleId ?? null,
       });
     } else if (req.method === "DELETE") {
       const deleteUserResult = await db

@@ -75,6 +75,10 @@ export default function HistoryPage() {
             <option value="comment">Commented</option>
             <option value="favorite">Saved</option>
             <option value="unsaved">Unsaved</option>
+            <option value="like">Liked</option>
+            <option value="unlike">Unliked</option>
+            <option value="repost">Reposted</option>
+            <option value="unrepost">Unreposted</option>
             <option value="comment_edited">Edited comments</option>
             <option value="comment_deleted">Deleted comments</option>
           </select>
