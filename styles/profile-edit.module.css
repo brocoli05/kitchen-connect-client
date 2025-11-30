@@ -13,6 +13,7 @@
   border: 1px solid #e5e7eb;
   border-radius: 16px;
   overflow: hidden;
+  margin: 0 auto;
 }
 .cardHead {
   padding: 1.25rem 1.5rem;
@@ -20,9 +21,7 @@
   font-size: 20px;
 }
 .cardBody {
-  display: grid;
-  gap: 2rem;
-  grid-template-columns: 1fr;
+  display: flex;
   padding: 2rem 1.5rem;
   border-top: 1px solid #e5e7eb;
 }
@@ -154,4 +153,18 @@
 .button {
   margin-top: 0.5rem;
   padding: 0.5rem 1rem;
+}
+.contentContainer {
+  width: 100%;
+  max-width: 950px;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 3rem;
+}
+.imageSection {
+  flex: 0 0 30%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 20px;
 }

@@ -10,6 +10,13 @@ export default function TopNavBar({}) {
   const router = useRouter();
   const { profileImage, setProfileImage } = useProfile();
 
+  const iconButtonStyle = {
+    backgroundColor: "transparent",
+    border: "none",
+    fontSize: "28px",
+    marginLeft: "20px",
+  };
+
   useEffect(() => {
     const fetchProfileImage = async () => {
       const token = localStorage.getItem("userToken");
