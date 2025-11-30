@@ -1,10 +1,14 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
+import dynamic from "next/dynamic";
 import s from "@/styles/profile-edit.module.css";
 import TopNavBar from "@/components/TopNavBar";
 import ProfileLayout from "../../components/ProfileLayout";
-import AvatarEditor from "react-avatar-editor";
 import { useProfile } from "@/context/ProfileContext";
+
+const AvatarEditor = dynamic(() => import("react-avatar-editor"), {
+  ssr: false,
+});
 
 export default function ProfileEditPage() {
   const router = useRouter();
@@ -248,77 +252,82 @@ export default function ProfileEditPage() {
             <section className={s.card}>
               <div className={s.cardHead}>Edit Information</div>
               <div className={s.cardBody}>
-                <main>
-                  <div className={s.profile}>
-                    <div className={s.avatar}>
-                      {selectedFile ? (
-                        <div className={s.editorWrapper}>
-                          <AvatarEditor
-                            ref={editorRef}
-                            image={selectedFile}
-                            width={120}
-                            height={120}
-                            border={0}
-                            borderRadius={60} // Circle
-                            color={[0, 0, 0, 0]}
-                            scale={zoom}
-                            rotate={0}
-                          />
-                          <input
-                            type="range"
-                            min="0.5"
-                            max="3"
-                            step="0.01"
-                            value={zoom}
-                            onChange={(e) =>
-                              setZoom(parseFloat(e.target.value))
-                            }
-                            className={s.zoomSlider}
-                          />
-                          <button
-                            onClick={uploadCroppedImage}
-                            className={s.button}
-                          >
-                            Save Image
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <img
-                            src={profileImage}
-                            alt="Profile"
-                            className={s.profileImg}
-                          />
-                          <label
-                            htmlFor="profileImageInput"
-                            className={s.changeBtn}
-                          >
-                            Change
-                          </label>
-                        </>
-                      )}
-                      <input
-                        id="profileImageInput"
-                        type="file"
-                        accept="image/*"
-                        style={{ display: "none" }}
-                        onChange={onFileChange}
-                      />
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>
-                        {form.username || "Unknown"}{" "}
-                        <span style={{ color: "#6b7280" }}>(nickname)</span>
+                <div className={s.editorLayout}>
+                  <div className={s.profileColumn}>
+                    <div className={s.profile}>
+                      <div className={s.avatar}>
+                        {selectedFile ? (
+                          <div className={`${s.editorWrapper} ${s.avatarControls}`}>
+                            <AvatarEditor
+                              ref={editorRef}
+                              image={selectedFile}
+                              width={120}
+                              height={120}
+                              border={0}
+                              borderRadius={60}
+                              color={[0, 0, 0, 0]}
+                              scale={zoom}
+                              rotate={0}
+                            />
+                            <div className={s.avatarControls}>
+                              <input
+                                type="range"
+                                min="0.5"
+                                max="3"
+                                step="0.01"
+                                value={zoom}
+                                onChange={(e) =>
+                                  setZoom(parseFloat(e.target.value))
+                                }
+                                className={s.zoomSlider}
+                              />
+                              <button
+                                onClick={uploadCroppedImage}
+                                className={s.button}
+                                type="button"
+                              >
+                                Save Image
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <img
+                              src={profileImage}
+                              alt="Profile"
+                              className={s.profileImg}
+                            />
+                            <label
+                              htmlFor="profileImageInput"
+                              className={s.changeBtn}
+                            >
+                              Change
+                            </label>
+                          </>
+                        )}
+                        <input
+                          id="profileImageInput"
+                          type="file"
+                          accept="image/*"
+                          style={{ display: "none" }}
+                          onChange={onFileChange}
+                        />
                       </div>
-                      <div style={{ fontSize: 14, color: "#6b7280" }}>
-                        @{form.username || "unknown"}
+                      <div>
+                        <div style={{ fontWeight: 600 }}>
+                          {form.username || "Unknown"}{" "}
+                          <span style={{ color: "#6b7280" }}>(nickname)</span>
+                        </div>
+                        <div style={{ fontSize: 14, color: "#6b7280" }}>
+                          @{form.username || "unknown"}
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   <form
                     onSubmit={onSubmit}
-                    className={s.form}
+                    className={`${s.form} ${s.formColumn}`}
                     aria-label="Edit profile form"
                   >
                     <div>
@@ -421,7 +430,7 @@ export default function ProfileEditPage() {
                       {isSubmitting ? "Updating..." : "Update Information"}
                     </button>
                   </form>
-                </main>
+                </div>
               </div>
             </section>
           </div>
