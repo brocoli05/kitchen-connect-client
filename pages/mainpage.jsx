@@ -1,6 +1,4 @@
-import TopNavBar from "@/components/TopNavBar";
-import LeftSidebar from "@/components/LeftSidebar";
-import RightSidebar from "@/components/RightSidebar";
+import Layout from "@/components/Layout";
 import React from "react";
 import { Row, Col } from "react-bootstrap";
 import { useState, useEffect } from "react";
@@ -115,14 +113,9 @@ export default function Home() {
     return <div>Loading...</div>;
   }
 
-  return (
+  const MainContent = (
     <>
-      <TopNavBar />
-      <Row className="mainpage">
-        <LeftSidebar isAdmin={isAdmin} />
-
-        <Col md={7} className="mainpage-center ">
-          {/* <Row className="quick-post d-flex justify-content-center m-1">
+      {/* <Row className="quick-post d-flex justify-content-center m-1">
 
             <Col
               md={10}
@@ -141,22 +134,24 @@ export default function Home() {
               <img src={"/photo.svg"} alt="photo" />
             </Col>
           </Row> */}
-          <Row className="m-5 d-flex justify-content-center">
-            {/* Display user's own posts */}
-            {Array.isArray(userPosts) && userPosts.length > 0 ? (
-              userPosts.map((post) => (
-                <PostCard key={post._id || post.id} post={post} />
-              ))
-            ) : (
-              <div>No posts yet. Create your first post!</div>
-            )}
-          </Row>
-        </Col>
-        <RightSidebar
-          suggestedPosts={suggestedPosts}
-          followingUsers={followingUsers}
-        />
+      <Row className="m-5 d-flex justify-content-center">
+        {/* Display user's own posts */}
+        {Array.isArray(userPosts) && userPosts.length > 0 ? (
+          userPosts.map((post) => (
+            <PostCard key={post._id || post.id} post={post} />
+          ))
+        ) : (
+          <div>No posts yet. Create your first post!</div>
+        )}
       </Row>
+    </>
+  );
+
+  return (
+    <>
+      <Layout suggestedPosts={suggestedPosts} followingUsers={followingUsers}>
+        {MainContent}
+      </Layout>
     </>
   );
 }
