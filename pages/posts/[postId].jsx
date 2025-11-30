@@ -8,7 +8,6 @@ import api from "../../utils/api";
 import TopNavBar from "@/components/TopNavBar";
 import { Row, Col } from "react-bootstrap";
 import st from "@/styles/createPost.module.css";
-import Head from "next/head";
 import ReportPostModal from "@/components/ReportPostModal";
 
 // Social Media Share URL Helper
@@ -44,17 +43,95 @@ const sharePost = async (title, url, onFallbackNeeded) => {
   }
 };
 
-const GEOLOCATION_TIMEOUT = 8000;
+const DIFFICULTY_OPTIONS = ["", "Easy", "Medium", "Hard"];
 
-export default function PostPage({ post, notFound, postIdFromProps }) {
-  const postId = post?.id;
+const formatTimeValue = (value) => {
+  if (value === 0) return "0";
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed === "" ? "" : trimmed;
+  }
+  return "";
+};
+
+const formatListForInput = (value, fallback = "") => {
+  if (Array.isArray(value)) return value.join(", ");
+  if (typeof value === "string") return value;
+  if (Array.isArray(fallback)) return fallback.join(", ");
+  if (typeof fallback === "string") return fallback;
+  return "";
+};
+
+const resolveList = (value, fallback) => {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (Array.isArray(fallback)) return fallback.filter(Boolean);
+  const source = value ?? fallback;
+  return typeof source === "string"
+    ? source
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : [];
+};
+
+const splitInputList = (value) =>
+  String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const createFormState = (source = {}) => ({
+  title: source?.title || "",
+  content: source?.content || "",
+  time: formatTimeValue(source?.timeMax),
+  difficulty: source?.difficulty || "",
+  dietary: typeof source?.dietary === "string" ? source.dietary : "",
+  include: formatListForInput(source?.includeIngredients, source?.include),
+  exclude: formatListForInput(source?.excludeIngredients, source?.exclude),
+});
+
+export default function PostPage({ post: initialPost, notFound, postIdFromProps }) {
   const router = useRouter();
+  const [postData, setPostData] = useState(initialPost);
+  const [form, setForm] = useState(() => createFormState(initialPost));
+  const [isSaving, setIsSaving] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(
+    typeof initialPost?.likeCount === "number" ? initialPost.likeCount : 0
+  );
+  const [isEditing, setIsEditing] = useState(false);
+  const [isReposted, setIsReposted] = useState(false);
+  const [repostCount, setRepostCount] = useState(
+    typeof initialPost?.repostCount === "number" ? initialPost.repostCount : 0
+  );
+  const [errors, setErrors] = useState({});
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [showShareOptions, setShowShareOptions] = useState(false);
+  const likingRef = useRef(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [blocking, setBlocking] = useState(false);
+  const [blockedPost, setBlockedPost] = useState(false);
+
+  const post = postData;
+  const postId = post?.id;
+  const currentUrl =
+    typeof window !== "undefined"
+      ? window.location.href
+      : `https://kitchen-connect-client.vercel.app/posts/${postIdFromProps}`;
+  const shareUrls = getSocialShareUrls(post?.title || "", currentUrl);
+  const includeList = resolveList(post?.includeIngredients, post?.include);
+  const excludeList = resolveList(post?.excludeIngredients, post?.exclude);
+  const includeDisplay = includeList.length ? includeList.join(", ") : "None";
+  const excludeDisplay = excludeList.length ? excludeList.join(", ") : "None";
 
   if (notFound || !post) {
     return (
       <>
         <TopNavBar />
-        <div style={{ textAlign: 'center', padding: '50px' }}>
+        <div style={{ textAlign: "center", padding: "50px" }}>
           <h1>Post not found</h1>
           <p>The post you're looking for doesn't exist.</p>
           <Link href="/">Go back home</Link>
@@ -62,41 +139,6 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
       </>
     );
   }
-
-  const [currentUser, setCurrentUser] = useState(null);
-  const [isOwner, setIsOwner] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(
-    typeof post.likeCount === "number" ? post.likeCount : 0
-  );
-  const [isEditing, setIsEditing] = useState(false);
-  const [isReposted, setIsReposted] = useState(false);
-  const [repostCount, setRepostCount] = useState(
-    typeof post.repostCount === "number" ? post.repostCount : 0
-  );
-  const [form, setForm] = useState({
-    title: post.title || "",
-    content: post.content || "",
-  });
-  const [errors, setErrors] = useState({});
-  const [isFavorited, setIsFavorited] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [showShareOptions, setShowShareOptions] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
-  const [isReposted, setIsReposted] = useState(false);
-  const [repostCount, setRepostCount] = useState(0);
-  const likingRef = useRef(false);
-  const currentUrl =
-    typeof window !== "undefined"
-      ? window.location.href
-      : `https://kitchen-connect-client.vercel.app/posts/${postIdFromProps}`;
-  const shareUrls = getSocialShareUrls(post.title, currentUrl);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [blocking, setBlocking] = useState(false);
-  const [blockedPost, setBlockedPost] = useState(false);
-  const [blockedAuthor, setBlockedAuthor] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
 
   // Repost
   useEffect(() => {
@@ -126,7 +168,6 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
     }
 
     const prev = { isReposted, repostCount };
-    // Optimistic UI
     setIsReposted(!isReposted);
     setRepostCount((c) => c + (isReposted ? -1 : 1));
 
@@ -139,7 +180,6 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
         setRepostCount(res.data.repostCount);
       }
     } catch (e) {
-      // rollback
       setIsReposted(prev.isReposted);
       setRepostCount(prev.repostCount);
       alert("Failed to update repost. Please try again.");
@@ -167,11 +207,16 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   }, [postIdFromProps]);
 
   const handleLike = async () => {
+    if (likingRef.current) return;
+    likingRef.current = true;
+
     const token = localStorage.getItem("userToken");
     if (!token) {
       alert("Please log in to like this post.");
+      likingRef.current = false;
       return;
     }
+
     const prev = { isLiked, likeCount };
     setIsLiked(!isLiked);
     setLikeCount((c) => c + (isLiked ? -1 : 1));
@@ -180,12 +225,15 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       setIsLiked(!!res.data.isLiked);
-      if (typeof res.data.likeCount === "number")
+      if (typeof res.data.likeCount === "number") {
         setLikeCount(res.data.likeCount);
+      }
     } catch (e) {
       setIsLiked(prev.isLiked);
       setLikeCount(prev.likeCount);
       alert("Failed to update like. Please try again.");
+    } finally {
+      likingRef.current = false;
     }
   };
   useEffect(() => {
@@ -196,43 +244,20 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
     fetch(`/api/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        setCurrentUser(data);
-        if (
-          data &&
-          post?.authorId &&
-          String(data.id) === String(post.authorId)
-        ) {
+        const postAuthorId =
+          post?.authorId ??
+          post?.author?.id ??
+          post?.author?._id ??
+          post?.authorId;
+        if (data && postAuthorId && String(data.id) === String(postAuthorId)) {
           setIsOwner(true);
-        }
-        if (data && (data.role === "admin" || data.isAdmin === true)) {
-          setIsAdmin(true);
+        } else {
+          setIsOwner(false);
         }
       })
       .catch(() => { });
   }, [post]);
 
-  if (notFound || !post) {
-    return (
-      <div style={{ padding: 24 }}>
-        <p>Post not found.</p>
-        <Link href="/">← Back</Link>
-      </div>
-    );
-  }
-
-  useEffect(() => {
-    const token = localStorage.getItem("userToken");
-    if (!token) return;
-
-    try {
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      if (userInfo) {
-        setCurrentUser(userInfo);
-      }
-    } catch (error) {
-      console.error("Failed to parse user info:", error);
-    }
-  }, []);
 
   const handleDelete = async () => {
     const ok = window.confirm(
@@ -291,15 +316,17 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
     }
   };
   const startEdit = () => {
-    setForm({ title: post.title || "", content: post.content || "" });
+    setForm(createFormState(post));
     setErrors({});
     setIsEditing(true);
   };
 
   const cancelEdit = () => {
+    setForm(createFormState(post));
     setIsEditing(false);
     setErrors({});
-    setSelectedImage(null); // Clear selected image when cancelling
+    setSelectedImage(null);
+    setIsSaving(false);
   };
 
   const onChange = (e) => {
@@ -309,66 +336,108 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   };
 
   const saveEdit = async () => {
-    // Client-side validation
     const newErrors = {};
-    if (!form.title || form.title.trim() === "")
-      newErrors.title = "Title is required";
-    if (!form.content || form.content.trim() === "")
-      newErrors.content = "Content is required";
+    const trimmedTitle = form.title?.trim() || "";
+    const trimmedContent = form.content?.trim() || "";
+    const parsedTime = form.time === "" ? null : Number(form.time);
+    if (!trimmedTitle) newErrors.title = "Title is required";
+    if (!trimmedContent) newErrors.content = "Content is required";
+    if (form.time !== "" && (!Number.isFinite(parsedTime) || parsedTime < 0)) {
+      newErrors.time = "Cooking time must be zero or a positive number";
+    }
+    if (form.difficulty && !DIFFICULTY_OPTIONS.includes(form.difficulty)) {
+      newErrors.difficulty = "Difficulty must be Easy, Medium, or Hard";
+    }
+    const dietaryTags = splitInputList(form.dietary);
+    const invalidDietary = dietaryTags.filter(
+      (tag) => !/^[a-zA-Z\s-]+$/.test(tag)
+    );
+    if (invalidDietary.length) {
+      newErrors.dietary = `Unsupported dietary tags: ${invalidDietary.join(", ")}`;
+    }
+
     if (Object.keys(newErrors).length) {
       setErrors(newErrors);
       return;
     }
 
+    setErrors({});
+    setIsSaving(true);
+
+    const includeCsv = splitInputList(form.include).join(", ");
+    const excludeCsv = splitInputList(form.exclude).join(", ");
+    const payload = {
+      title: trimmedTitle,
+      content: trimmedContent,
+      timeMax: parsedTime ?? "",
+      difficulty: form.difficulty,
+      dietary: dietaryTags.join(", "),
+      include: includeCsv,
+      exclude: excludeCsv,
+    };
+
     const token =
       typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
+
     try {
       let resp;
 
       if (selectedImage) {
-        // If there's an image, use FormData
         const formData = new FormData();
-        formData.append("title", form.title);
-        formData.append("content", form.content);
+        Object.entries(payload).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            formData.append(key, value === null ? "" : String(value));
+          }
+        });
         formData.append("photo", selectedImage);
 
         resp = await fetch(`/api/posts/${postId}`, {
           method: "PUT",
-          headers: { Authorization: `Bearer ${token}` }, // Don't set Content-Type for FormData
+          headers: { Authorization: `Bearer ${token}` },
           body: formData,
         });
       } else {
-        // No image - use regular JSON approach
         resp = await fetch(`/api/posts/${postId}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ title: form.title, content: form.content }),
+          body: JSON.stringify(payload),
         });
       }
 
       const data = await resp.json();
       if (resp.ok) {
-        // Update UI
-        post.title = data.title;
-        post.content = data.content;
-        if (data.photoUrl) {
-          post.photoUrl = data.photoUrl; // Update photo if new one was uploaded
-        }
-        setIsEditing(false);
-        setSelectedImage(null); // Clear selected image
-        alert("Post updated");
+        const updatedPost = {
+          ...post,
+          title: data.title,
+          content: data.content,
+          photo: data.photo || data.photoUrl || post.photo,
+          timeMax: data.timeMax ?? null,
+          difficulty: data.difficulty ?? "",
+          dietary: data.dietary ?? "",
+          includeIngredients: Array.isArray(data.includeIngredients)
+            ? data.includeIngredients
+            : splitInputList(includeCsv),
+          excludeIngredients: Array.isArray(data.excludeIngredients)
+            ? data.excludeIngredients
+            : splitInputList(excludeCsv),
+        };
 
-        // Refresh the page to show updated image
-        window.location.reload();
+        setPostData(updatedPost);
+        setForm(createFormState(updatedPost));
+        setIsEditing(false);
+        setSelectedImage(null);
+        alert("Post updated");
       } else {
         alert(data.message || "Failed to update post");
       }
     } catch (e) {
       console.error(e);
       alert("Failed to update post. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -521,39 +590,7 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
             </button>
             <button
               type="button"
-              onClick={async () => {
-                if (likingRef.current) return;
-                likingRef.current = true;
-
-                const token = localStorage.getItem("userToken");
-                if (!token) {
-                  console.warn("Please log in to like this post");
-                  likingRef.current = false;
-                  return;
-                }
-
-                try {
-                  const res = await api.post(
-                    `/posts/${postIdFromProps}/isLike`,
-                    null,
-                    { headers: { Authorization: `Bearer ${token}` } }
-                  );
-
-                  if (res?.data) {
-                    setIsLiked(!!res.data.isLiked);
-                    if (typeof res.data.likeCount === "number")
-                      setLikeCount(res.data.likeCount);
-                  }
-                } catch (err) {
-                  console.error(
-                    "like failed:",
-                    err?.response?.status,
-                    err?.response?.data || err.message
-                  );
-                } finally {
-                  likingRef.current = false;
-                }
-              }}
+              onClick={handleLike}
               style={{
                 padding: "8px 16px",
                 fontSize: 16,
@@ -728,7 +765,9 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
         >
           <div style={{ fontSize: 13, color: "#374151" }}>
             <strong style={{ display: "block", color: "#111827" }}>Cooking Time</strong>
-            {typeof post.timeMax === "number" && post.timeMax > 0 ? `${post.timeMax} min` : "—"}
+            {typeof post.timeMax === "number" && post.timeMax > 0
+              ? `${post.timeMax} min`
+              : "—"}
           </div>
           <div style={{ fontSize: 13, color: "#374151" }}>
             <strong style={{ display: "block", color: "#111827" }}>Difficulty</strong>
@@ -755,11 +794,11 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
           </div>
           <div style={{ fontSize: 13, color: "#374151" }}>
             <strong style={{ display: "block", color: "#111827" }}>Include</strong>
-            {post.includeIngredients || "—"}
+            {includeDisplay || "—"}
           </div>
           <div style={{ fontSize: 13, color: "#374151" }}>
             <strong style={{ display: "block", color: "#111827" }}>Exclude</strong>
-            {post.excludeIngredients || "—"}
+            {excludeDisplay || "—"}
           </div>
         </div>
 
@@ -843,72 +882,147 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
                   {errors.content && (
                     <div style={{ color: "red" }}>{errors.content}</div>
                   )}
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {/* Image Upload Section*/}
-                    <Row className={st.imageUploadSection}>
-                      <Col md={3}>
-                        <label htmlFor="imageUpload">
-                          Add Photo (Optional):
-                        </label>
-                      </Col>
-                      <Col md={9}>
-                        <input
-                          type="file"
-                          id="imageUpload"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          style={{ margin: "10px 0", display: "block" }}
-                        />
-                        {/* Show selected file name and remove button */}
-                        {selectedImage && (
-                          <div
+                  <Row>
+                    <Col style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <label>Cooking Time (minutes)</label>
+                      <input
+                        name="time"
+                        type="number"
+                        min="0"
+                        value={form.time}
+                        onChange={onChange}
+                        placeholder="e.g., 30"
+                        className={st.input}
+                      />
+                      {errors.time && <div style={{ color: "red" }}>{errors.time}</div>}
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <label>Difficulty</label>
+                      <select
+                        name="difficulty"
+                        value={form.difficulty}
+                        onChange={onChange}
+                        className={st.input}
+                      >
+                        {DIFFICULTY_OPTIONS.map((opt) => (
+                          <option key={opt || "none"} value={opt}>
+                            {opt ? opt : "Select difficulty"}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.difficulty && (
+                        <div style={{ color: "red" }}>{errors.difficulty}</div>
+                      )}
+                    </Col>
+                    <Col style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <label>Dietary Tags</label>
+                      <input
+                        name="dietary"
+                        type="text"
+                        value={form.dietary}
+                        onChange={onChange}
+                        placeholder="e.g., vegan, halal"
+                        className={st.input}
+                      />
+                      {errors.dietary && (
+                        <div style={{ color: "red" }}>{errors.dietary}</div>
+                      )}
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <label>Include Ingredients</label>
+                      <input
+                        name="include"
+                        type="text"
+                        value={form.include}
+                        onChange={onChange}
+                        placeholder="e.g., chicken, cheese"
+                        className={st.input}
+                      />
+                    </Col>
+                    <Col style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <label>Exclude Ingredients</label>
+                      <input
+                        name="exclude"
+                        type="text"
+                        value={form.exclude}
+                        onChange={onChange}
+                        placeholder="e.g., nuts, gluten"
+                        className={st.input}
+                      />
+                    </Col>
+                  </Row>
+
+                  <Row className={st.imageUploadSection}>
+                    <Col md={3}>
+                      <label htmlFor="imageUpload">Add Photo (Optional):</label>
+                    </Col>
+                    <Col md={9}>
+                      <input
+                        type="file"
+                        id="imageUpload"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        style={{ margin: "10px 0", display: "block" }}
+                      />
+                      {selectedImage && (
+                        <div
+                          style={{
+                            marginTop: "10px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                          }}
+                        >
+                          <span
                             style={{
-                              marginTop: "10px",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "10px",
+                              color: "#28a745",
+                              fontSize: "14px",
+                              fontWeight: "500",
                             }}
                           >
-                            <span
-                              style={{
-                                color: "#28a745",
-                                fontSize: "14px",
-                                fontWeight: "500",
-                              }}
-                            >
-                              ✓ {selectedImage.name}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={removeImage}
-                              style={{
-                                background: "#dc3545",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "4px",
-                                padding: "4px 8px",
-                                fontSize: "12px",
-                                cursor: "pointer",
-                              }}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        )}
-                      </Col>
-                    </Row>
+                            ✓ {selectedImage.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={removeImage}
+                            style={{
+                              background: "#dc3545",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "4px",
+                              padding: "4px 8px",
+                              fontSize: "12px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </Col>
+                  </Row>
 
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <button
                       onClick={saveEdit}
+                      disabled={isSaving}
                       style={{
                         background: "#10b981",
                         color: "#fff",
                         padding: "8px 12px",
                         border: "none",
                         borderRadius: 6,
+                        opacity: isSaving ? 0.7 : 1,
+                        cursor: isSaving ? "not-allowed" : "pointer",
                       }}
                     >
-                      Save
+                      {isSaving ? "Saving..." : "Save"}
                     </button>
                     <button
                       onClick={cancelEdit}
