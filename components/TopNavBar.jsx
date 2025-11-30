@@ -7,6 +7,12 @@ import { signOut } from "next-auth/react";
 
 export default function TopNavBar({}) {
   const router = useRouter();
+  const iconButtonStyle = {
+    backgroundColor: "transparent",
+    border: "none",
+    fontSize: "28px",
+    marginLeft: "20px",
+  };
 
 
   return (
@@ -21,9 +27,27 @@ export default function TopNavBar({}) {
           md={4}
           className="d-flex justify-content-end topnav-right d-flex align-items-center"
         >
-            <Button className="list-link d-flex justify-content-center" href="/posts/favorite">🔖 Favorite</Button>
-            <Button className="list-link d-flex justify-content-center" href="#/action-3">📙 Lists </Button>
-			<Button className="list-link d-flex justify-content-center" href="/history">👣 History</Button>
+            <button
+              type="button"
+              style={iconButtonStyle}
+              onClick={() => router.push("/posts/favorite")}
+            >
+              ❤️
+            </button>
+            <button
+              type="button"
+              style={iconButtonStyle}
+              onClick={() => router.push("#/action-3")}
+            >
+              📙
+            </button>
+			<button
+              type="button"
+              style={iconButtonStyle}
+              onClick={() => router.push("/history")}
+            >
+              👣
+            </button>
           <button
             onClick={() => router.push("/profile/edit")}
             className=" d-flex align-items-center h-100 justify-content-center btn btn-link"
@@ -36,7 +60,7 @@ export default function TopNavBar({}) {
           </button>
           
               <button 
-			 style={{backgroundColor: "transparent", border: "none", fontSize: "35px", marginLeft: "12px"}} 
+			 style={{ ...iconButtonStyle, marginLeft: 0 }} 
 			  onClick={() => router.push("/profile/edit")}>
                 ⚙️
               </button>
