@@ -1,4 +1,4 @@
-import TopNavBar from "@/components/TopNavBar";
+import Layout from "@/components/Layout";
 import React from "react";
 import { Row, Col } from "react-bootstrap";
 import { useState, useEffect } from "react";
@@ -37,9 +37,9 @@ function ToggleList({ title }) {
           <li>
             <a href="#/action-3">Lists</a>
           </li>
-              <li>
-                <a href="/history">History</a>
-              </li>
+          <li>
+            <a href="/history">History</a>
+          </li>
         </ul>
       )}
       {open && title === "Kitchen" && (
@@ -67,18 +67,21 @@ function Contact({ user }) {
     <Row className="mb-3">
       <Col md={4}>
         <img
-          src={user.avatarUrl || '/avatar.png'}
+          src={user.avatarUrl || "/avatar.png"}
           alt="Avatar"
           className="profile-contact-img"
         />
       </Col>
       <Col md={8}>
-        <Link href={`/users/${user.id}`} style={{ textDecoration: 'none' }}>
-          <p className="profile-contact-name" style={{ cursor: 'pointer', color: '#007bff' }}>
+        <Link href={`/users/${user.id}`} style={{ textDecoration: "none" }}>
+          <p
+            className="profile-contact-name"
+            style={{ cursor: "pointer", color: "#007bff" }}
+          >
             {user.name || user.username}
           </p>
         </Link>
-        <p className="profile-contact-bio">{user.bio || 'No bio available'}</p>
+        <p className="profile-contact-bio">{user.bio || "No bio available"}</p>
       </Col>
     </Row>
   );
@@ -97,7 +100,7 @@ export default function Home() {
       try {
         // Get the token from localStorage
         const token = localStorage.getItem("userToken");
-        
+
         if (!token) {
           console.error("No token found, redirecting to login");
           router.push("/login");
@@ -105,16 +108,16 @@ export default function Home() {
         }
 
         // Get current user info with authorization header
-        const userResponse = await fetch('/api/me', {
+        const userResponse = await fetch("/api/me", {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         });
         if (userResponse.ok) {
           const user = await userResponse.json();
-          console.log('User data:', user); // Debug log
+          console.log("User data:", user); // Debug log
           setCurrentUser(user);
-          
+
           // Fetch detailed info about users the current user is following
           if (user.following && user.following.length > 0) {
             try {
@@ -128,34 +131,35 @@ export default function Home() {
                 })
               );
               // Filter out any null results and set the following users
-              const validFollowingUsers = followingUsersData.filter(user => user !== null);
+              const validFollowingUsers = followingUsersData.filter(
+                (user) => user !== null
+              );
               setFollowingUsers(validFollowingUsers);
-              console.log('Following users:', validFollowingUsers);
+              console.log("Following users:", validFollowingUsers);
             } catch (error) {
-              console.error('Error fetching following users:', error);
+              console.error("Error fetching following users:", error);
               setFollowingUsers([]);
             }
           } else {
             setFollowingUsers([]);
           }
-          
+
           // Fetch user's posts using their ID
           const postsResponse = await fetch(`/api/users/${user.id}/posts`);
           if (postsResponse.ok) {
             const posts = await postsResponse.json();
-            console.log('Posts data:', posts); 
-            
+            console.log("Posts data:", posts);
 
             if (posts.items && Array.isArray(posts.items)) {
               setUserPosts(posts.items);
             } else if (Array.isArray(posts)) {
               setUserPosts(posts);
             } else {
-              console.error('Posts response is not an array:', posts);
-              setUserPosts([]); 
+              console.error("Posts response is not an array:", posts);
+              setUserPosts([]);
             }
           } else {
-            console.error('Failed to fetch posts:', postsResponse.status);
+            console.error("Failed to fetch posts:", postsResponse.status);
             setUserPosts([]);
           }
 
@@ -163,19 +167,19 @@ export default function Home() {
           if (suggestedResponse.ok) {
             const suggestedData = await suggestedResponse.json();
             if (suggestedData.items && Array.isArray(suggestedData.items)) {
-              setSuggestedPosts(suggestedData.items); // 
+              setSuggestedPosts(suggestedData.items); //
             }
           } else {
-            console.log('No suggested posts available');
+            console.log("No suggested posts available");
             setSuggestedPosts([]);
           }
         } else {
-          console.error('Failed to fetch user:', userResponse.status);
+          console.error("Failed to fetch user:", userResponse.status);
           setUserPosts([]);
         }
       } catch (error) {
-        console.error('Error fetching user data:', error);
-        setUserPosts([]); 
+        console.error("Error fetching user data:", error);
+        setUserPosts([]);
       } finally {
         setLoading(false);
       }
@@ -189,82 +193,14 @@ export default function Home() {
   }
 
   return (
-    <>
-      <TopNavBar />
-      <Row className="mainpage">
-        <Col md={2} className="mainpage-left">
-          <p className="left-right-title">Feed</p>
-          <ToggleList title="Discover" />
-          <ToggleList title="Personal" />
-          <ToggleList title="Kitchen" />
-          <Row className="d-flex justify-content-center">
-            <button
-              className="post-button "
-              onClick={() => router.push("/posts/create")}
-            >
-              Post
-            </button>
-          </Row>
-        </Col>
-
-        <Col md={7} className="mainpage-center ">
-          {/* <Row className="quick-post d-flex justify-content-center m-1">
-
-            <Col
-              md={10}
-              className="d-flex align-items-center quick-post"
-              style={{ border: "none" }}
-            >
-              <input
-                type="text"
-                placeholder="What's on your mind?"
-                style={{ width: "100%", border: "none", borderRadius: "4px" }}
-              />
-            </Col>
-            <Col md={2} className="d-flex justify-content-end">
-              <img src={"/mic.svg"} alt="mic" />
-              <img src={"/mood.svg"} alt="mood" />
-              <img src={"/photo.svg"} alt="photo" />
-            </Col>
-          </Row> */}
-          <Row className="m-5 d-flex justify-content-center">
-            {/* Display user's own posts */}
-            {Array.isArray(userPosts) && userPosts.length > 0 ? (
-              userPosts.map((post) => (
-                <PostCard key={post._id || post.id} post={post} />
-              ))
-            ) : (
-              <div>No posts yet. Create your first post!</div>
-            )}
-          </Row>
-        </Col>
-        <Col md={3} className="mainpage-right p-3">
-          <p className="left-right-title">Suggested</p>
-          <Row className="feed-row d-flex justify-content-start">
-            {/* Display one suggested post (random post from other users) */}
-            {Array.isArray(suggestedPosts) && suggestedPosts.length > 0 ? (
-              <PostCard key={`suggested-${suggestedPosts[0]._id || suggestedPosts[0].id}`} post={suggestedPosts[0]} />
-            ) : (
-              <div>No suggested posts available</div>
-            )}
-          </Row>
-          <Row>
-            <p style={{ fontWeight: "bold", fontSize: "24px" }}>Following</p>
-            {followingUsers.length > 0 ? (
-              followingUsers.map((user) => (
-                <Contact 
-                  key={user._id} 
-                  user={user} 
-                />
-              ))
-            ) : (
-              <div style={{ color: '#666', fontStyle: 'italic' }}>
-                You're not following anyone yet. Go explore and follow some users!
-              </div>
-            )}
-          </Row>
-        </Col>
-      </Row>
-    </>
+    <Layout suggestedPosts={suggestedPosts} followingUsers={followingUsers}>
+      {userPosts.length > 0 ? (
+        userPosts.map((post) => (
+          <PostCard key={post._id || post.id} post={post} />
+        ))
+      ) : (
+        <div>No posts yet. Create your first post!</div>
+      )}
+    </Layout>
   );
 }
