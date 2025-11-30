@@ -126,7 +126,7 @@ export default function TrendingPage() {
         }
 
         const res = await api.get("/trending");
-        const items = res.data.items || [];
+        const items = (res.data.items || []).slice(0, 5);
         const postsWithLikes = items.map((post) => ({
           ...post,
           likes: Array(post.likeCount || 0).fill(1),
