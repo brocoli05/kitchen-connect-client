@@ -224,6 +224,9 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
   }, [postIdFromProps]);
 
   const handleLike = async () => {
+    // Debouncing pattern: likingRef is used to prevent multiple rapid like/unlike actions.
+    // If likingRef.current is true, a like/unlike request is already in progress.
+    // This avoids sending duplicate requests if the user clicks repeatedly.
     if (likingRef.current) return;
     likingRef.current = true;
 
