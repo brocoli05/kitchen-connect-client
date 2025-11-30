@@ -4,8 +4,7 @@ import { useRouter } from "next/router";
 import { Row, Col } from "react-bootstrap";
 import { signOut } from "next-auth/react";
 
-const ProfileLayout = ({ children }) => {
-
+const ProfileLayout = ({ children, user }) => {
   const router = useRouter();
   const [aiDisabled, setAiDisabled] = useState(false);
 
@@ -13,7 +12,7 @@ const ProfileLayout = ({ children }) => {
     try {
       const v = localStorage.getItem("aiDisabled");
       setAiDisabled(v === "true");
-    } catch {}
+    } catch { }
   }, []);
   // handleLogout must be inside the component
   const handleLogout = async () => {
@@ -59,13 +58,14 @@ const ProfileLayout = ({ children }) => {
       alert("Failed to update AI setting. Please try again.");
     }
   };
-const menuItems = [
-  { name: "Notifications", path: "/profile/notifications" },
-  { name: "Edit Information", path: "/profile/edit" },
-  { name: "Delete Account", path: "/profile/delete" },
-  { name: aiDisabled ? "Enable AI" : "Disable AI", onClick: handleToggleAI },
-  { name: "Log Out", onClick: handleLogout },
-];
+  const menuItems = [
+    { name: "Notifications", path: "/profile/notifications" },
+    { name: "Edit Information", path: "/profile/edit" },
+    { name: "Change Password", path: "/profile/change-password" },
+    { name: "Delete Account", path: "/profile/delete" },
+    { name: aiDisabled ? "Enable AI" : "Disable AI", onClick: handleToggleAI },
+    { name: "Log Out", onClick: handleLogout },
+  ];
 
   return (
     <Row>
@@ -74,48 +74,58 @@ const menuItems = [
         <aside>
           <p className="left-right-title">Settings</p>
           <nav>
-            <ul style={{ padding: "0", marginTop: "20px" }}>
-  {menuItems.map((item) => {
-    const isActive = item.path && router.pathname === item.path;
-
-    return (
-		
-      <li key={item.name} style={{ listStyle: "none", marginBottom: "10px" }}>
-        {item.path ? (
-          <Link
-            href={item.path}
-            style={{
-              textDecoration: "none",
-              display: "block",
-              padding: "8px 10px",
-              borderRadius: "4px",
-              fontWeight: isActive ? "bold" : "normal",
-              backgroundColor: isActive ? "#f0f0f0" : "transparent",
-              color: isActive ? "#333" : "#666",
-            }}
-          >
-            {item.name}
-          </Link>
-        ) : item.onClick ? (
-          <button
-            onClick={item.onClick}
-            style={{
-              display: "block",
-              padding: "8px 10px",
-              borderRadius: "4px",
-              border: "none",
-              backgroundColor: "transparent",
-              color: "#666",
-              cursor: "pointer",
-            }}
-          >
-            {item.name}
-          </button>
-        ) : null}
-      </li>
-    );
-  })}
-</ul>
+            <ul style={{ padding: 0, marginTop: "20px" }}>
+              {menuItems
+                .filter((item) => {
+                  if (user?.googleId && item.path === "/profile/change-password") {
+                    return false;
+                  }
+                  return true;
+                })
+                .map((item) => {
+                  const isActive = item.path && router.pathname === item.path;
+                  return (
+                    <li
+                      key={item.name}
+                      style={{ listStyle: "none", marginBottom: "10px" }}
+                    >
+                      {item.path ? (
+                        <Link
+                          href={item.path}
+                          style={{
+                            textDecoration: "none",
+                            display: "block",
+                            padding: "8px 10px",
+                            borderRadius: "4px",
+                            fontWeight: isActive ? "bold" : "normal",
+                            backgroundColor: isActive ? "#f0f0f0" : "transparent",
+                            color: isActive ? "#333" : "#666",
+                          }}
+                        >
+                          {item.name}
+                        </Link>
+                      ) : item.onClick ? (
+                        <button
+                          type="button"
+                          onClick={item.onClick}
+                          style={{
+                            width: "100%",
+                            textAlign: "left",
+                            padding: "8px 10px",
+                            borderRadius: "4px",
+                            border: "none",
+                            backgroundColor: "transparent",
+                            color: "#666",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {item.name}
+                        </button>
+                      ) : null}
+                    </li>
+                  );
+                })}
+            </ul>
           </nav>
         </aside>
       </Col>
