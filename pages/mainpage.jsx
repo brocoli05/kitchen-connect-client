@@ -31,13 +31,13 @@ function ToggleList({ title, isAdmin = false }) {
             </a>
           </li>
           <li className="list-item">
-            <a className="list-link" href="#/action-2">
+            <a className="list-link" href="/browse">
               <span style={{ marginRight: "18px" }}>🔎</span>
               Browse
             </a>
           </li>
           <li className="list-item">
-            <a className="list-link" href="#/action-1"><span style={{ marginRight: "18px" }}>🌎</span>Explore</a>
+            <a className="list-link" href="/explore"><span style={{ marginRight: "18px" }}>🌎</span>Explore</a>
           </li>
         </ul>
       )}
