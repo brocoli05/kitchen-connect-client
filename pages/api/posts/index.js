@@ -1,5 +1,6 @@
 // pages/api/posts/index.js
 import clientPromise from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 
 /** Build a safe case-insensitive regex */
 function rx(s) {
@@ -90,17 +91,28 @@ export default async function handler(req, res) {
     }
 
     // ---- Sorting ----
-    const sortOption =
-      sort === "newest"
-        ? { createdAt: -1 }
-        : sort === "liked"
-        ? { likeCount: -1 }
-        : {}; // relevance fallback (no special sort)
+    const { sortField, sortOrder } = req.query;
+
+    let sortOption = {};
+
+    if (sortField === "title") {
+      sortOption.title = sortOrder === "asc" ? 1 : -1;
+    } else if (sort === "newest") {
+      sortOption = { createdAt: -1 };
+    } else if (sort === "liked") {
+      sortOption = { likeCount: -1 };
+    }
 
     const coll = db.collection("posts");
 
     const [items, total] = await Promise.all([
-      coll.find(filter).sort(sortOption).skip(skip).limit(limit).toArray(),
+      coll
+        .find(filter)
+        .collation({ locale: "en", strength: 2 })
+        .sort(sortOption)
+        .skip(skip)
+        .limit(limit)
+        .toArray(),
       coll.countDocuments(filter),
     ]);
 
@@ -112,11 +124,35 @@ export default async function handler(req, res) {
 
     const totalPages = Math.max(1, Math.ceil(total / limit));
 
+    const users = db.collection("users");
+
+    const itemsWithAuthor = await Promise.all(
+      normalized.map(async (post) => {
+        let author = null;
+        if (post.authorId) {
+          const user = await users.findOne({
+            _id: new ObjectId(post.authorId),
+          });
+          if (user) {
+            author = {
+              id: String(user._id),
+              name: user.username,
+              avatar: user.profileImage || null,
+            };
+          }
+        }
+        return {
+          ...post,
+          author,
+        };
+      })
+    );
+
     return res.status(200).json({
-      items: normalized,
+      items: itemsWithAuthor,
       total,
-      totalPages,     // used by /recipes
-      page,           // used by /recipes
+      totalPages, // used by /recipes
+      page, // used by /recipes
       pageCount: totalPages, // also provide alias for /pages/posts/index.jsx
     });
   } catch (e) {

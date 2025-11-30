@@ -10,7 +10,6 @@ import { Row, Col } from "react-bootstrap";
 import st from "@/styles/createPost.module.css";
 import Head from "next/head";
 
-
 // Social Media Share URL Helper
 const getSocialShareUrls = (title, url) => {
   const encodedTitle = encodeURIComponent(title);
@@ -54,10 +53,14 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [isOwner, setIsOwner] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(typeof post.likeCount === "number" ? post.likeCount : 0);
+  const [likeCount, setLikeCount] = useState(
+    typeof post.likeCount === "number" ? post.likeCount : 0
+  );
   const [isEditing, setIsEditing] = useState(false);
   const [isReposted, setIsReposted] = useState(false);
-  const [repostCount, setRepostCount] = useState(typeof post.repostCount === "number" ? post.repostCount : 0);
+  const [repostCount, setRepostCount] = useState(
+    typeof post.repostCount === "number" ? post.repostCount : 0
+  );
   const [form, setForm] = useState({
     title: post.title || "",
     content: post.content || "",
@@ -72,7 +75,6 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
       : `https://kitchen-connect-client.vercel.app/posts/${postIdFromProps}`;
   const shareUrls = getSocialShareUrls(post.title, currentUrl);
 
-
   // Repost
   useEffect(() => {
     const token = localStorage.getItem("userToken");
@@ -80,17 +82,18 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
 
     (async () => {
       try {
-        const res = await api.get(
-          `/posts/${postIdFromProps}/repost`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const res = await api.get(`/posts/${postIdFromProps}/repost`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setIsReposted(!!res.data.isReposted);
-        setRepostCount(typeof res.data.repostCount === "number" ? res.data.repostCount : 0);
+        setRepostCount(
+          typeof res.data.repostCount === "number" ? res.data.repostCount : 0
+        );
       } catch (e) {
         console.warn("fetchRepostStatus failed", e?.response?.status);
       }
     })();
-  }, [postIdFromProps]); 
+  }, [postIdFromProps]);
 
   const handleRepost = async () => {
     const token = localStorage.getItem("userToken");
@@ -120,23 +123,22 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
     }
   };
 
-
   // Like
   useEffect(() => {
     const token = localStorage.getItem("userToken");
     if (!token) return;
-  
+
     (async () => {
       try {
-        const res = await api.get(
-          `/posts/${postIdFromProps}/isLike`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const res = await api.get(`/posts/${postIdFromProps}/isLike`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setIsLiked(!!res.data.isLiked);
-        setLikeCount(typeof res.data.likeCount === "number" ? res.data.likeCount : 0);
+        setLikeCount(
+          typeof res.data.likeCount === "number" ? res.data.likeCount : 0
+        );
       } catch (e) {
         console.warn("fetchLikeStatus failed", e?.response?.status);
-       
       }
     })();
   }, [postIdFromProps]);
@@ -155,7 +157,8 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       setIsLiked(!!res.data.isLiked);
-      if (typeof res.data.likeCount === "number") setLikeCount(res.data.likeCount);
+      if (typeof res.data.likeCount === "number")
+        setLikeCount(res.data.likeCount);
     } catch (e) {
       setIsLiked(prev.isLiked);
       setLikeCount(prev.likeCount);
@@ -171,7 +174,11 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         setCurrentUser(data);
-        if (data && post?.authorId && String(data.id) === String(post.authorId)) {
+        if (
+          data &&
+          post?.authorId &&
+          String(data.id) === String(post.authorId)
+        ) {
           setIsOwner(true);
         }
       })
@@ -503,75 +510,93 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
                 minute: "2-digit",
                 second: "2-digit",
                 hour12: true,
-              })}
+              })}{" "}
+              by{" "}
+              {post.author ? (
+                <Link
+                  href={`/users/${post.author.id}`}
+                  style={{
+                    fontWeight: 600,
+                    color: "#333",
+                    textDecoration: "underline",
+                  }}
+                >
+                  {post.author.name || "Unknown"}
+                </Link>
+              ) : (
+                <span style={{ fontWeight: 600, color: "#333" }}>Unknown</span>
+              )}
             </p>
             <button
-            type="button"                  
-            onClick={async () => {
-              if (likingRef.current) return;  
-              likingRef.current = true;
+              type="button"
+              onClick={async () => {
+                if (likingRef.current) return;
+                likingRef.current = true;
 
-              const token = localStorage.getItem("userToken");
-              if (!token) {
-                
-                console.warn("Please log in to like this post");
-                likingRef.current = false;
-                return;
-              }
-
-              try {
-              
-                const res = await api.post(
-                  `/posts/${postIdFromProps}/isLike`,
-                  null,
-                  { headers: { Authorization: `Bearer ${token}` } }
-                );
-
-                if (res?.data) {
-                  setIsLiked(!!res.data.isLiked);
-                  if (typeof res.data.likeCount === "number") setLikeCount(res.data.likeCount);
+                const token = localStorage.getItem("userToken");
+                if (!token) {
+                  console.warn("Please log in to like this post");
+                  likingRef.current = false;
+                  return;
                 }
-              } catch (err) {
-                console.error("like failed:", err?.response?.status, err?.response?.data || err.message);
-                
-              } finally {
-                likingRef.current = false;
-              }
-            }}
-            style={{
-              padding: "8px 16px",
-              fontSize: 16,
-              border: "1px solid #333",
-              borderRadius: 4,
-              backgroundColor: isLiked ? "#e11d48" : "#fff",
-              color: isLiked ? "#fff" : "#333",
-              cursor: "pointer",
-              fontWeight: isLiked ? "bold" : "normal",
-            }}
-          >
-            ❤️ {isLiked ? "Liked" : "Like"}{typeof likeCount === "number" ? ` (${likeCount})` : ""}
-          </button>
-          <button
-            type="button"
-            onClick={handleRepost}
-            disabled={isOwner}                
-            title={isOwner ? "You cannot repost your own post" : ""}
-            style={{
-              padding: "8px 16px",
-              fontSize: 16,
-              border: "1px solid #333",
-              borderRadius: 4,
-              backgroundColor: isReposted ? "#0ea5e9" : "#fff",
-              color: isOwner ? "#aaa" : (isReposted ? "#fff" : "#333"),
-              cursor: isOwner ? "not-allowed" : "pointer",
-              fontWeight: isReposted ? "bold" : "normal",
-              marginLeft: 8,
-              opacity: isOwner ? 0.6 : 1,
-            }}
-          >
-            🔁 {isReposted ? "Reposted" : "Repost"}
-            {typeof repostCount === "number" ? ` (${repostCount})` : ""}
-          </button>
+
+                try {
+                  const res = await api.post(
+                    `/posts/${postIdFromProps}/isLike`,
+                    null,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                  );
+
+                  if (res?.data) {
+                    setIsLiked(!!res.data.isLiked);
+                    if (typeof res.data.likeCount === "number")
+                      setLikeCount(res.data.likeCount);
+                  }
+                } catch (err) {
+                  console.error(
+                    "like failed:",
+                    err?.response?.status,
+                    err?.response?.data || err.message
+                  );
+                } finally {
+                  likingRef.current = false;
+                }
+              }}
+              style={{
+                padding: "8px 16px",
+                fontSize: 16,
+                border: "1px solid #333",
+                borderRadius: 4,
+                backgroundColor: isLiked ? "#e11d48" : "#fff",
+                color: isLiked ? "#fff" : "#333",
+                cursor: "pointer",
+                fontWeight: isLiked ? "bold" : "normal",
+              }}
+            >
+              ❤️ {isLiked ? "Liked" : "Like"}
+              {typeof likeCount === "number" ? ` (${likeCount})` : ""}
+            </button>
+            <button
+              type="button"
+              onClick={handleRepost}
+              disabled={isOwner}
+              title={isOwner ? "You cannot repost your own post" : ""}
+              style={{
+                padding: "8px 16px",
+                fontSize: 16,
+                border: "1px solid #333",
+                borderRadius: 4,
+                backgroundColor: isReposted ? "#0ea5e9" : "#fff",
+                color: isOwner ? "#aaa" : isReposted ? "#fff" : "#333",
+                cursor: isOwner ? "not-allowed" : "pointer",
+                fontWeight: isReposted ? "bold" : "normal",
+                marginLeft: 8,
+                opacity: isOwner ? 0.6 : 1,
+              }}
+            >
+              🔁 {isReposted ? "Reposted" : "Repost"}
+              {typeof repostCount === "number" ? ` (${repostCount})` : ""}
+            </button>
             <div style={{ display: "flex", gap: 8, position: "relative" }}>
               {/* Save Button */}
               <button
@@ -866,12 +891,12 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
           <button
             onClick={() => openGoogleMaps()}
             style={{
-              background: '#2563eb',
-              color: '#fff',
-              padding: '8px 12px',
-              border: 'none',
+              background: "#2563eb",
+              color: "#fff",
+              padding: "8px 12px",
+              border: "none",
               borderRadius: 6,
-              cursor: 'pointer'
+              cursor: "pointer",
             }}
           >
             Find nearby stores
