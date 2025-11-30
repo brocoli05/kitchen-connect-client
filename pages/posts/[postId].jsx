@@ -930,21 +930,6 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
         )}
 
         {/* --- COMMENT section --- */}
-        <div style={{ margin: "12px 0" }}>
-          <button
-            onClick={() => openGoogleMaps()}
-            style={{
-              background: "#2563eb",
-              color: "#fff",
-              padding: "8px 12px",
-              border: "none",
-              borderRadius: 6,
-              cursor: "pointer",
-            }}
-          >
-            Find nearby stores
-          </button>
-        </div>
         <hr style={{ margin: "40px 0", borderTop: "1px solid #ddd" }} />
 
         <section className="comments-section">
