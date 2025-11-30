@@ -41,6 +41,25 @@ export default async function handler(req,res){
       else{
         update = {$addToSet: {favoritePosts : postObjectId}};
         isFavNow = true;
+
+        // Create notification for post author
+        try {
+          const post = await db.collection("posts").findOne({ _id: postObjectId }, { projection: { authorId: 1, userId: 1, title: 1 } });
+          const authorId = post?.authorId || post?.userId;
+          if (authorId && !new ObjectId(authorId).equals(userObjectId)) {
+            const actingUser = await db.collection("users").findOne({ _id: userObjectId }, { projection: { username: 1 } });
+            const username = actingUser?.username || 'Someone';
+            const message = `${username} saved your post - "${post?.title || 'Untitled'}"`;
+            await db.collection('notifications').insertOne({
+              userId: new ObjectId(authorId),
+              message,
+              postId: postObjectId,
+              createdAt: new Date(),
+            });
+          }
+        } catch (e) {
+          console.warn("Failed to create favorite notification", e);
+        }
       }
 
       const result = await db.collection("users").updateOne({_id: userObjectId}, update);
