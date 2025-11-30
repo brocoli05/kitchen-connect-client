@@ -18,7 +18,7 @@ export default async function handler(req, res) {
 
     const items = await db
       .collection("posts")
-      .find({ $or: [{ authorId: String(user._id) }, { userId: String(user._id) }] })
+      .find({ $or: [{ authorId: String(user._id) }, { userId: String(user._id) }], hidden: { $ne: true },  })
       .sort({ createdAt: -1 })
       .toArray();
 

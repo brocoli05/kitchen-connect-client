@@ -25,21 +25,40 @@ export default async function handler(req, res) {
     const db = client.db(process.env.MONGODB_DB || "kitchen-connect");
 
     if (req.method === "GET") {
-      const post = await db.collection("posts").findOne({ _id: new ObjectId(postId) });
+      const post = await db
+        .collection("posts")
+        .findOne({ _id: new ObjectId(postId) });
       if (!post) return res.status(404).json({ message: "Post not found" });
+
+      let author = null;
+      if (post.authorId) {
+        author = await db
+          .collection("users")
+          .findOne({ _id: new ObjectId(post.authorId) });
+      }
 
       return res.status(200).json({
         id: String(post._id),
         title: post.title ?? "",
         content: post.content ?? "",
         photo: post.photo ?? null,
-        authorId: post.authorId ?? post.userId ?? null,
+        author: author
+          ? {
+              id: String(author._id),
+              name: author.username,
+              avatar: author.profileImage || null,
+            }
+          : null,
         createdAt: post.createdAt ?? null,
+        likes: post.likes ?? 0,
+        reposts: post.reposts ?? 0,
+        comments: post.comments ?? 0,
+        views: post.views ?? 0,
         timeMax: post.timeMax ?? null,
         difficulty: post.difficulty ?? null,
         dietary: post.dietary ?? null,
-        include: post.include ?? null,
-        exclude: post.exclude ?? null,
+        include: post.includeIngredients ?? [],
+        exclude: post.excludeIngredients ?? [],
       });
     }
 
@@ -55,7 +74,9 @@ export default async function handler(req, res) {
         return res.status(401).json({ message: "Invalid or expired token" });
       }
 
-      const post = await db.collection("posts").findOne({ _id: new ObjectId(postId) });
+      const post = await db
+        .collection("posts")
+        .findOne({ _id: new ObjectId(postId) });
       if (!post) return res.status(404).json({ message: "Post not found" });
 
       // Only author can delete
@@ -66,7 +87,9 @@ export default async function handler(req, res) {
       // If post has a local photo path, attempt to delete the file
       if (post.photo && typeof post.photo === "string") {
         try {
-          const possiblePath = post.photo.startsWith("/") ? post.photo.slice(1) : post.photo;
+          const possiblePath = post.photo.startsWith("/")
+            ? post.photo.slice(1)
+            : post.photo;
           const filePath = path.join(process.cwd(), possiblePath);
           if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
@@ -92,7 +115,9 @@ export default async function handler(req, res) {
         return res.status(401).json({ message: "Invalid or expired token" });
       }
 
-      const post = await db.collection("posts").findOne({ _id: new ObjectId(postId) });
+      const post = await db
+        .collection("posts")
+        .findOne({ _id: new ObjectId(postId) });
       if (!post) return res.status(404).json({ message: "Post not found" });
 
       // Only author can edit
@@ -123,11 +148,23 @@ export default async function handler(req, res) {
 
         const [fields, files] = await parseForm(form, req);
         title = Array.isArray(fields.title) ? fields.title[0] : fields.title;
-        content = Array.isArray(fields.content) ? fields.content[0] : fields.content;
+        content = Array.isArray(fields.content)
+          ? fields.content[0]
+          : fields.content;
         photoFile = Array.isArray(files.photo) ? files.photo[0] : files.photo;
-        if (fields.timeMax) updates.timeMax = Number(Array.isArray(fields.timeMax) ? fields.timeMax[0] : fields.timeMax) || 0;
-        if (fields.difficulty) updates.difficulty = Array.isArray(fields.difficulty) ? fields.difficulty[0] : fields.difficulty;
-        if (fields.dietary) updates.dietary = Array.isArray(fields.dietary) ? fields.dietary[0] : fields.dietary;
+        if (fields.timeMax)
+          updates.timeMax =
+            Number(
+              Array.isArray(fields.timeMax) ? fields.timeMax[0] : fields.timeMax
+            ) || 0;
+        if (fields.difficulty)
+          updates.difficulty = Array.isArray(fields.difficulty)
+            ? fields.difficulty[0]
+            : fields.difficulty;
+        if (fields.dietary)
+          updates.dietary = Array.isArray(fields.dietary)
+            ? fields.dietary[0]
+            : fields.dietary;
 
         // Convert include and exclude to arrays and rename to includeIngredients and excludeIngredients
         if (fields.include) {
@@ -140,7 +177,6 @@ export default async function handler(req, res) {
             ? fields.exclude[0].split(",").map((item) => item.trim())
             : fields.exclude.split(",").map((item) => item.trim());
         }
-
       } else {
         // Parse raw JSON since bodyParser is disabled
         const raw = await new Promise((resolve, reject) => {
@@ -194,17 +230,32 @@ export default async function handler(req, res) {
       // If photo uploaded, store as base64 in DB (works on deployed hosts)
       if (photoFile) {
         try {
-          const tempPath = photoFile.filepath || photoFile.path || photoFile.tempFilePath || photoFile.file?.path;
+          const tempPath =
+            photoFile.filepath ||
+            photoFile.path ||
+            photoFile.tempFilePath ||
+            photoFile.file?.path;
           const mimetype = photoFile.mimetype || photoFile.type || "image/jpeg";
 
           if (!tempPath || !fs.existsSync(tempPath)) {
-            console.error("Uploaded file temp path missing or not found:", { tempPath, photoFile });
-            return res.status(500).json({ message: "Uploaded file not found on server" });
+            console.error("Uploaded file temp path missing or not found:", {
+              tempPath,
+              photoFile,
+            });
+            return res
+              .status(500)
+              .json({ message: "Uploaded file not found on server" });
           }
 
           const buffer = fs.readFileSync(tempPath);
-          const base64Image = `data:${mimetype};base64,${buffer.toString("base64")}`;
-          try { fs.unlinkSync(tempPath); } catch (e) { /* ignore */ }
+          const base64Image = `data:${mimetype};base64,${buffer.toString(
+            "base64"
+          )}`;
+          try {
+            fs.unlinkSync(tempPath);
+          } catch (e) {
+            /* ignore */
+          }
 
           updateFields.photo = base64Image;
         } catch (err) {
@@ -213,8 +264,12 @@ export default async function handler(req, res) {
         }
       }
 
-      await db.collection("posts").updateOne({ _id: new ObjectId(postId) }, { $set: updateFields });
-      const updatedPost = await db.collection("posts").findOne({ _id: new ObjectId(postId) });
+      await db
+        .collection("posts")
+        .updateOne({ _id: new ObjectId(postId) }, { $set: updateFields });
+      const updatedPost = await db
+        .collection("posts")
+        .findOne({ _id: new ObjectId(postId) });
 
       return res.status(200).json({
         id: String(updatedPost._id),
@@ -238,4 +293,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ message: "Internal server error" });
   }
 }
-

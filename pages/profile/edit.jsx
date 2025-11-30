@@ -22,6 +22,7 @@ export default function ProfileEditPage() {
   const editorRef = useRef(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [zoom, setZoom] = useState(1);
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("userToken");
@@ -35,6 +36,7 @@ export default function ProfileEditPage() {
     })
       .then((res) => res.json())
       .then((data) => {
+        setCurrentUser(data);
         setForm({
           firstName: data.firstName || "",
           lastName: data.lastName || "",
@@ -240,7 +242,7 @@ export default function ProfileEditPage() {
   return (
     <>
       <TopNavBar />
-      <ProfileLayout>
+      <ProfileLayout user={currentUser}>
         <div className={s.page}>
           <div className={s.wrap}>
             <section className={s.card}>
