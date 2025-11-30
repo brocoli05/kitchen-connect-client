@@ -2,14 +2,14 @@
 import Link from "next/link";
 import CommentSection from "@/components/CommentSection";
 import ChatWidget from "@/components/ChatWidget";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import api from "../../utils/api";
 import TopNavBar from "@/components/TopNavBar";
 import { Row, Col } from "react-bootstrap";
 import st from "@/styles/createPost.module.css";
 import Head from "next/head";
-
+import ReportPostModal from "@/components/ReportPostModal";
 
 // Social Media Share URL Helper
 const getSocialShareUrls = (title, url) => {
@@ -50,14 +50,22 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   const postId = post?.id;
   const router = useRouter();
 
-  const likingRef = useRef(false);
+  if (notFound || !post) {
+    return (
+      <>
+        <TopNavBar />
+        <div style={{ textAlign: 'center', padding: '50px' }}>
+          <h1>Post not found</h1>
+          <p>The post you're looking for doesn't exist.</p>
+          <Link href="/">Go back home</Link>
+        </div>
+      </>
+    );
+  }
+
   const [currentUser, setCurrentUser] = useState(null);
   const [isOwner, setIsOwner] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(typeof post.likeCount === "number" ? post.likeCount : 0);
   const [isEditing, setIsEditing] = useState(false);
-  const [isReposted, setIsReposted] = useState(false);
-  const [repostCount, setRepostCount] = useState(typeof post.repostCount === "number" ? post.repostCount : 0);
   const [form, setForm] = useState({
     title: post.title || "",
     content: post.content || "",
@@ -66,12 +74,21 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   const [isFavorited, setIsFavorited] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [showShareOptions, setShowShareOptions] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [isReposted, setIsReposted] = useState(false);
+  const [repostCount, setRepostCount] = useState(0);
+  const likingRef = useRef(false);
   const currentUrl =
     typeof window !== "undefined"
       ? window.location.href
       : `https://kitchen-connect-client.vercel.app/posts/${postIdFromProps}`;
   const shareUrls = getSocialShareUrls(post.title, currentUrl);
 
+  const [showReportModal, setShowReportModal] = useState(false);
+const [blocking, setBlocking] = useState(false);
+const [blockedPost, setBlockedPost] = useState(false);   
+const [blockedAuthor, setBlockedAuthor] = useState(false);
 
   // Repost
   useEffect(() => {
@@ -171,7 +188,11 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         setCurrentUser(data);
-        if (data && post?.authorId && String(data.id) === String(post.authorId)) {
+        if (
+          data &&
+          post?.authorId &&
+          String(data.id) === String(post.authorId)
+        ) {
           setIsOwner(true);
         }
       })
@@ -255,50 +276,6 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
     const fileInput = document.getElementById("imageUpload");
     if (fileInput) {
       fileInput.value = "";
-    }
-  };
-
-  // Open Google Maps directly. If geolocation is available and permitted, center on user's location.
-  const openGoogleMaps = (query = "grocery store") => {
-    const q = encodeURIComponent(query || "grocery store");
-
-    const openUrl = (lat, lng) => {
-      let url;
-      if (lat != null && lng != null) {
-        url = `https://www.google.com/maps/search/${q}/@${lat},${lng},14z`;
-      } else {
-        url = `https://www.google.com/maps/search/${q}`;
-      }
-      window.open(url, "_blank");
-    };
-
-    if (typeof navigator !== "undefined" && navigator.geolocation) {
-      const called = { v: false };
-      const timer = setTimeout(() => {
-        if (!called.v) {
-          called.v = true;
-          openUrl(); // fallback without coords
-        }
-      }, GEOLOCATION_TIMEOUT);
-
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          if (called.v) return;
-          called.v = true;
-          clearTimeout(timer);
-          openUrl(pos.coords.latitude, pos.coords.longitude);
-        },
-        (err) => {
-          if (called.v) return;
-          called.v = true;
-          clearTimeout(timer);
-          openUrl();
-        },
-        { enableHighAccuracy: true, timeout: 7000 }
-      );
-    } else {
-      // No geolocation available
-      openUrl();
     }
   };
   const startEdit = () => {
@@ -402,46 +379,6 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
     checkFavorite();
   }, [postIdFromProps]);
 
-  // Record a 'view' activity for this post in the user's history.
-  // Prevent duplicate records when navigating back/forward by
-  // remembering viewed posts in sessionStorage for the browser session.
-  useEffect(() => {
-    const recordView = async () => {
-      if (typeof window === "undefined") return;
-
-      // Only send once per browser session for this postId
-      const sessionKey = `viewed_post_${postIdFromProps}`;
-      try {
-        if (sessionStorage.getItem(sessionKey)) return;
-      } catch (e) {
-        // sessionStorage might be unavailable in some environments; swallow
-      }
-
-      const token = localStorage.getItem("userToken");
-      if (!token) return;
-
-      try {
-        await api.post("/users/history", {
-          type: "view",
-          postId: postIdFromProps,
-          title: post.title || null,
-        });
-
-        // mark as recorded for this session so back-button won't re-send
-        try {
-          sessionStorage.setItem(sessionKey, String(Date.now()));
-        } catch (e) {
-          // ignore storage errors
-        }
-      } catch (e) {
-        // don't block page load if recording fails
-        console.error("Failed to record view history", e);
-      }
-    };
-
-    if (router.isReady) recordView();
-  }, [postIdFromProps, post.title, router.isReady]);
-
   const handleSaveButton = async () => {
     const token = localStorage.getItem("userToken");
     if (!token) {
@@ -460,26 +397,6 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
 
   return (
     <>
-      <Head>
-        <title>{post.title}</title>
-        {/* Ensure your live domain is used here for absolute URLs */}
-        <meta property="og:title" content={post.title} />
-        <meta
-          property="og:description"
-          content={post.content.substring(0, 150) + "..."}
-        />
-        <meta property="og:url" content={currentUrl} />
-        {/* Replace YOUR_DEFAULT_IMAGE_URL with your absolute image path */}
-        <meta
-          property="og:image"
-          content={
-            post.photo ||
-            "https://kitchen-connect-client.vercel.app/images/default-recipe.png"
-          }
-        />
-        <meta property="og:type" content="article" />
-        <meta name="twitter:card" content="summary_large_image" />
-      </Head>
       <TopNavBar />
       <div style={{ maxWidth: 820, margin: "72px auto", padding: "0 16px" }}>
         <Link href="/">← Back</Link>
@@ -505,6 +422,76 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
                 hour12: true,
               })}
             </p>
+            {/* Report button */}
+  <button
+    type="button"
+    onClick={() => setShowReportModal(true)}
+    style={{
+      padding: "8px 16px",
+      fontSize: 16,
+      border: "1px solid #dc2626",
+      borderRadius: 4,
+      backgroundColor: "#fff",
+      color: "#dc2626",
+      cursor: "pointer",
+    }}
+  >
+    🚩 Report
+  </button>
+
+  {/* Block post (toggle) */}
+  <button
+    type="button"
+    disabled={blocking}
+    onClick={async () => {
+      const token =
+        typeof window !== "undefined"
+          ? localStorage.getItem("userToken")
+          : null;
+      if (!token) {
+        alert("Please log in to block posts.");
+        return;
+      }
+      setBlocking(true);
+      try {
+        const res = await fetch(`/api/posts/${postIdFromProps}/block`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ scope: "post" }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.message || "Failed to update block.");
+        } else {
+          setBlockedPost(data.blocked);
+          alert(
+            data.blocked
+              ? "This post is now blocked and will be hidden from your feed."
+              : "This post is unblocked."
+          );
+        }
+      } catch (e) {
+        console.error("block post failed", e);
+        alert("Failed to block post.");
+      } finally {
+        setBlocking(false);
+      }
+    }}
+    style={{
+      padding: "8px 16px",
+      fontSize: 16,
+      border: "1px solid #6b7280",
+      borderRadius: 4,
+      backgroundColor: blockedPost ? "#6b7280" : "#fff",
+      color: blockedPost ? "#fff" : "#374151",
+      cursor: blocking ? "default" : "pointer",
+    }}
+  >
+    {blockedPost ? "Blocked post" : "Block post"}
+  </button>
             <button
             type="button"                  
             onClick={async () => {
@@ -862,29 +849,19 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
         )}
 
         {/* --- COMMENT section --- */}
-        <div style={{ margin: "12px 0" }}>
-          <button
-            onClick={() => openGoogleMaps()}
-            style={{
-              background: '#2563eb',
-              color: '#fff',
-              padding: '8px 12px',
-              border: 'none',
-              borderRadius: 6,
-              cursor: 'pointer'
-            }}
-          >
-            Find nearby stores
-          </button>
-        </div>
         <hr style={{ margin: "40px 0", borderTop: "1px solid #ddd" }} />
 
         <section className="comments-section">
           <h2 style={{ marginBottom: 20 }}>Comments</h2>
           {postId && <CommentSection postId={postId} />}
         </section>
-        {/* Chat widget (floating) */}
+        {/* Floating chat widget (respects AI disable flag) */}
         <ChatWidget contextId={postId} />
+        <ReportPostModal
+          postId={postIdFromProps}
+          open={showReportModal}
+          onClose={() => setShowReportModal(false)}
+        />
       </div>
     </>
   );

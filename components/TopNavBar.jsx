@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import { Dropdown } from "react-bootstrap";
+import { Button, Dropdown } from "react-bootstrap";
 import { signOut } from "next-auth/react";
 import { useProfile } from "../context/ProfileContext";
 
@@ -35,34 +35,12 @@ export default function TopNavBar({}) {
     fetchProfileImage();
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      const token = localStorage.getItem("userToken");
 
-      await fetch("/api/users/logout", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      await signOut({ redirect: false });
-
-      localStorage.removeItem("userToken");
-
-      router.push("/login");
-    } catch (error) {
-      console.error("Logout error:", error);
-      // Still logout even if API fails
-      localStorage.removeItem("userToken");
-      router.push("/login");
-    }
-  };
   return (
     <div>
       <Row className="m-3 d-flex align-items-center topnav">
         <Col md={8} className="d-flex justify-content-start topnav-left">
-          <a className="fw-bold active" href="/mainpage">
+          <a className="fw-bold active" style={{fontSize: "24px"}} href="/mainpage">
             Kitchen Connect
           </a>
         </Col>
@@ -78,28 +56,14 @@ export default function TopNavBar({}) {
               color: "#FFFFFF",
               backgroundColor: "#000000ff",
               border: "none",
-              height: "35px",
-              width: "86px",
+              height: "40px",
+              width: "106px",
             }}
             type="button"
           >
             Favorites
           </button>
-          {/* <button
-            onClick={() => router.push("/share")}
-            className="me-3 rounded-3 d-flex align-items-center justify-content-center btn btn-link fw-bold"
-            style={{
-              textDecoration: "none",
-              color: "#FFFFFF",
-              backgroundColor: "#000000ff",
-              border: "none",
-              height: "35px",
-              width: "56px",
-            }}
-            type="button"
-          >
-            Share
-          </button> */}
+
           <button
             onClick={() => router.push("/profile/edit")}
             className=" d-flex align-items-center h-100 justify-content-center btn btn-link"
@@ -111,28 +75,15 @@ export default function TopNavBar({}) {
               style={{ width: "35px", height: "35px" }}
             />
           </button>
-          <Dropdown className="me-3 rounded-3 d-flex align-items-center justify-content-center">
-            <Dropdown.Toggle
-              variant="light"
-              className="fw-bold "
-              style={{
-                // width: "46px",
-                backgroundColor: "#EEEEEE",
-                border: "none",
-                fontSize: "1.5rem",
-                color: "#333",
-                height: "35px",
-                width: "56px",
-              }}
-              id="dropdown-settings"
-            ></Dropdown.Toggle>
-            <Dropdown.Menu align="end">
-              <Dropdown.Item onClick={() => router.push("/profile/edit")}>
-                Settings…
-              </Dropdown.Item>
-              <Dropdown.Item onClick={handleLogout}>Logout</Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown>
+          
+              <button 
+			 style={{backgroundColor: "transparent", border: "none", fontSize: "35px", marginLeft: "12px"}} 
+			  onClick={() => router.push("/profile/edit")}>
+                ⚙️
+              </button>
+			  {/* will add the logout to settings later */}
+              {/* <Dropdown.Item onClick={handleLogout}>Logout</Dropdown.Item> */}
+
         </Col>
       </Row>
     </div>
