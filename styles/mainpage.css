@@ -70,6 +70,7 @@
 	text-align: left;
 	background: none;
 	border: none;
+	color: black;
 }
 .list-item:hover .list-link {
   text-decoration: none;

@@ -21,22 +21,9 @@ export default function TopNavBar({}) {
           md={4}
           className="d-flex justify-content-end topnav-right d-flex align-items-center"
         >
-          <button
-            onClick={() => router.push("/posts/favorite")}
-            className="me-3 rounded-3 d-flex align-items-center justify-content-center btn btn-link fw-bold"
-            style={{
-              textDecoration: "none",
-              color: "#FFFFFF",
-              backgroundColor: "#000000ff",
-              border: "none",
-              height: "40px",
-              width: "106px",
-            }}
-            type="button"
-          >
-            Favorites
-          </button>
-
+            <Button className="list-link d-flex justify-content-center" href="/posts/favorite">🔖 Favorite</Button>
+            <Button className="list-link d-flex justify-content-center" href="#/action-3">📙 Lists </Button>
+			<Button className="list-link d-flex justify-content-center" href="/history">👣 History</Button>
           <button
             onClick={() => router.push("/profile/edit")}
             className=" d-flex align-items-center h-100 justify-content-center btn btn-link"

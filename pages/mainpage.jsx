@@ -41,7 +41,7 @@ function ToggleList({ title }) {
           </li>
         </ul>
       )}
-      {open && title === "Personal" && (
+      {/* {open && title === "Personal" && (
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
           <li className="list-item">
             <a className="list-link" href="#/action-1"><span style={{ marginRight: "18px" }}>🔔</span>Notifications</a>
@@ -56,7 +56,7 @@ function ToggleList({ title }) {
                 <a className="list-link" href="/history"><span style={{ marginRight: "18px" }}>👣</span>History</a>
               </li>
         </ul>
-      )}
+      )} */}
       {open && title === "Kitchen" && (
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
           <li className="list-item">
@@ -262,7 +262,7 @@ export default function Home() {
         <Col md={2} className="mainpage-left">
           <p className="left-right-title">Feed</p>
           <ToggleList title="Discover" />
-          <ToggleList title="Personal" />
+          {/* <ToggleList title="Personal" /> */}
           <ToggleList title="Kitchen" />
           <Row className="d-flex justify-content-center m-3" >
             <button
