@@ -62,11 +62,17 @@ function ToggleList({ title }) {
           <li className="list-item">
             <a className="list-link" href="/recipes"><span style={{ marginRight: "18px" }}>🍎</span>Recipes</a>
           </li>
-          <li>
-            <a href="/messages">Messages</a>
+          <li className="list-item">
+            <Link className="list-link" href="/messages">
+              <span style={{ marginRight: "18px" }}>💬</span>
+              Messages
+            </Link>
           </li>
           <li className="list-item">
-            <a className="list-link" href="#/action-2"><span style={{ marginRight: "18px" }}>🥖</span>Recommended</a>
+            <Link className="list-link" href="/posts/recommended">
+              <span style={{ marginRight: "18px" }}>🥖</span>
+              Recommended
+            </Link>
           </li>
           <li className="list-item">
             <a className="list-link" href="#/action-3"><span style={{ marginRight: "18px" }}>🔥</span>Trending</a>
