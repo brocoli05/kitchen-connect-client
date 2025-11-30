@@ -60,6 +60,7 @@ const ProfileLayout = ({ children }) => {
     }
   };
 const menuItems = [
+  { name: "Notifications", path: "/profile/notifications" },
   { name: "Edit Information", path: "/profile/edit" },
   { name: "Delete Account", path: "/profile/delete" },
   { name: aiDisabled ? "Enable AI" : "Disable AI", onClick: handleToggleAI },
@@ -71,7 +72,7 @@ const menuItems = [
       {/* Left Sidebar */}
       <Col md={2} className="mainpage-left">
         <aside>
-          <p className="left-right-title">Profile</p>
+          <p className="left-right-title">Settings</p>
           <nav>
             <ul style={{ padding: "0", marginTop: "20px" }}>
   {menuItems.map((item) => {
