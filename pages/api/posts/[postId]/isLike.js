@@ -113,6 +113,25 @@ export default async function handler(req, res) {
         { _id: post._id },
         { $addToSet: { likedUsers: userObjectId }, $inc: { likeCount: 1 } }
       );
+
+      // Create notification for post author
+      try {
+        const postAuthor = await posts.findOne({ _id: post._id }, { projection: { authorId: 1, userId: 1 } });
+        const authorId = postAuthor?.authorId || postAuthor?.userId;
+        if (authorId && !new ObjectId(authorId).equals(userObjectId)) {
+          const actingUser = await users.findOne({ _id: userObjectId }, { projection: { username: 1 } });
+          const username = actingUser?.username || 'Someone';
+          const message = `${username} liked your post - "${post.title || 'Untitled'}"`;
+          await db.collection('notifications').insertOne({
+            userId: new ObjectId(authorId),
+            message,
+            postId: post._id,
+            createdAt: new Date(),
+          });
+        }
+      } catch (e) {
+        console.warn("Failed to create like notification", e);
+      }
     }
 
     // Record to user's history (like / unlike) – optional but mirrors favorite

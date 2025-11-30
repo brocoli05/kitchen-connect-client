@@ -15,6 +15,7 @@ export default function ProfileEditPage() {
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("userToken");
@@ -28,6 +29,7 @@ export default function ProfileEditPage() {
     })
       .then((res) => res.json())
       .then((data) => {
+        setCurrentUser(data);
         setForm({
           firstName: data.firstName || "",
           lastName: data.lastName || "",
@@ -180,7 +182,7 @@ export default function ProfileEditPage() {
   return (
     <>
       <TopNavBar />
-      <ProfileLayout>
+      <ProfileLayout user={currentUser}>
         <div className={s.page}>
           <div className={s.wrap}>
             <section className={s.card}>

@@ -6,6 +6,66 @@ import fs from "fs";
 import path from "path";
 import formidable from "formidable";
 
+const toStringArray = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value
+      .map((item) =>
+        typeof item === "string" ? item.trim() : String(item || "").trim()
+      )
+      .filter(Boolean);
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((item) =>
+            typeof item === "string" ? item.trim() : String(item || "").trim()
+          )
+          .filter(Boolean);
+      }
+    } catch {
+      // fall through to CSV parsing
+    }
+    return trimmed
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+};
+
+const listToCsv = (list) =>
+  Array.isArray(list) && list.length ? list.join(", ") : "";
+
+const firstFieldValue = (value) => (Array.isArray(value) ? value[0] : value);
+
+const normalizeOptionalString = (value) => {
+  const raw = firstFieldValue(value);
+  if (raw === undefined || raw === null) return null;
+  const str = String(raw).trim();
+  return str || null;
+};
+
+const normalizeTimeField = (value) => {
+  const raw = firstFieldValue(value);
+  if (raw === undefined || raw === null || raw === "") {
+    return { unset: true };
+  }
+  const num = Number(raw);
+  if (!Number.isFinite(num) || num < 0) {
+    return {
+      error: "Cooking time must be a non-negative number",
+    };
+  }
+  return { value: num };
+};
+
+const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+
 // Disable body parsing for FormData when editing with images
 export const config = {
   api: {
@@ -25,21 +85,49 @@ export default async function handler(req, res) {
     const db = client.db(process.env.MONGODB_DB || "kitchen-connect");
 
     if (req.method === "GET") {
-      const post = await db.collection("posts").findOne({ _id: new ObjectId(postId) });
+      const post = await db
+        .collection("posts")
+        .findOne({ _id: new ObjectId(postId) });
       if (!post) return res.status(404).json({ message: "Post not found" });
+
+      const includeIngredients = toStringArray(
+        post.includeIngredients ?? post.include
+      );
+      const excludeIngredients = toStringArray(
+        post.excludeIngredients ?? post.exclude
+      );
+
+      let author = null;
+      if (post.authorId) {
+        author = await db
+          .collection("users")
+          .findOne({ _id: new ObjectId(post.authorId) });
+      }
 
       return res.status(200).json({
         id: String(post._id),
         title: post.title ?? "",
         content: post.content ?? "",
         photo: post.photo ?? null,
-        authorId: post.authorId ?? post.userId ?? null,
+        author: author
+          ? {
+              id: String(author._id),
+              name: author.username,
+              avatar: author.profileImage || null,
+            }
+          : null,
         createdAt: post.createdAt ?? null,
+        likes: post.likes ?? 0,
+        reposts: post.reposts ?? 0,
+        comments: post.comments ?? 0,
+        views: post.views ?? 0,
         timeMax: post.timeMax ?? null,
         difficulty: post.difficulty ?? null,
         dietary: post.dietary ?? null,
-        include: post.include ?? null,
-        exclude: post.exclude ?? null,
+        includeIngredients,
+        excludeIngredients,
+        include: listToCsv(includeIngredients),
+        exclude: listToCsv(excludeIngredients),
       });
     }
 
@@ -55,7 +143,9 @@ export default async function handler(req, res) {
         return res.status(401).json({ message: "Invalid or expired token" });
       }
 
-      const post = await db.collection("posts").findOne({ _id: new ObjectId(postId) });
+      const post = await db
+        .collection("posts")
+        .findOne({ _id: new ObjectId(postId) });
       if (!post) return res.status(404).json({ message: "Post not found" });
 
       // Only author can delete
@@ -66,7 +156,9 @@ export default async function handler(req, res) {
       // If post has a local photo path, attempt to delete the file
       if (post.photo && typeof post.photo === "string") {
         try {
-          const possiblePath = post.photo.startsWith("/") ? post.photo.slice(1) : post.photo;
+          const possiblePath = post.photo.startsWith("/")
+            ? post.photo.slice(1)
+            : post.photo;
           const filePath = path.join(process.cwd(), possiblePath);
           if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
@@ -92,7 +184,9 @@ export default async function handler(req, res) {
         return res.status(401).json({ message: "Invalid or expired token" });
       }
 
-      const post = await db.collection("posts").findOne({ _id: new ObjectId(postId) });
+      const post = await db
+        .collection("posts")
+        .findOne({ _id: new ObjectId(postId) });
       if (!post) return res.status(404).json({ message: "Post not found" });
 
       // Only author can edit
@@ -101,8 +195,8 @@ export default async function handler(req, res) {
       }
 
       let title, content, photoFile;
-      // collect update-able fields here
-      let updates = {};
+      const updates = {};
+      const unsetFields = {};
 
       // Helper: promisify formidable.parse
       const parseForm = (form, req) =>
@@ -123,24 +217,52 @@ export default async function handler(req, res) {
 
         const [fields, files] = await parseForm(form, req);
         title = Array.isArray(fields.title) ? fields.title[0] : fields.title;
-        content = Array.isArray(fields.content) ? fields.content[0] : fields.content;
+        content = Array.isArray(fields.content)
+          ? fields.content[0]
+          : fields.content;
         photoFile = Array.isArray(files.photo) ? files.photo[0] : files.photo;
-        if (fields.timeMax) updates.timeMax = Number(Array.isArray(fields.timeMax) ? fields.timeMax[0] : fields.timeMax) || 0;
-        if (fields.difficulty) updates.difficulty = Array.isArray(fields.difficulty) ? fields.difficulty[0] : fields.difficulty;
-        if (fields.dietary) updates.dietary = Array.isArray(fields.dietary) ? fields.dietary[0] : fields.dietary;
-
-        // Convert include and exclude to arrays and rename to includeIngredients and excludeIngredients
-        if (fields.include) {
-          updates.includeIngredients = Array.isArray(fields.include)
-            ? fields.include[0].split(",").map((item) => item.trim())
-            : fields.include.split(",").map((item) => item.trim());
-        }
-        if (fields.exclude) {
-          updates.excludeIngredients = Array.isArray(fields.exclude)
-            ? fields.exclude[0].split(",").map((item) => item.trim())
-            : fields.exclude.split(",").map((item) => item.trim());
+        if (hasOwn(fields, "timeMax")) {
+          const timeResult = normalizeTimeField(fields.timeMax);
+          if (timeResult.error) {
+            return res.status(400).json({ message: timeResult.error });
+          }
+          if (timeResult.unset) unsetFields.timeMax = "";
+          else updates.timeMax = timeResult.value;
         }
 
+        if (hasOwn(fields, "difficulty")) {
+          const difficultyValue = normalizeOptionalString(fields.difficulty);
+          if (difficultyValue === null) unsetFields.difficulty = "";
+          else updates.difficulty = difficultyValue;
+        }
+
+        if (hasOwn(fields, "dietary")) {
+          const dietaryValue = normalizeOptionalString(fields.dietary);
+          if (dietaryValue === null) unsetFields.dietary = "";
+          else updates.dietary = dietaryValue;
+        }
+
+        const includeFieldKey = hasOwn(fields, "includeIngredients")
+          ? "includeIngredients"
+          : hasOwn(fields, "include")
+          ? "include"
+          : null;
+        if (includeFieldKey) {
+          const includeValues = toStringArray(fields[includeFieldKey]);
+          if (includeValues.length) updates.includeIngredients = includeValues;
+          else unsetFields.includeIngredients = "";
+        }
+
+        const excludeFieldKey = hasOwn(fields, "excludeIngredients")
+          ? "excludeIngredients"
+          : hasOwn(fields, "exclude")
+          ? "exclude"
+          : null;
+        if (excludeFieldKey) {
+          const excludeValues = toStringArray(fields[excludeFieldKey]);
+          if (excludeValues.length) updates.excludeIngredients = excludeValues;
+          else unsetFields.excludeIngredients = "";
+        }
       } else {
         // Parse raw JSON since bodyParser is disabled
         const raw = await new Promise((resolve, reject) => {
@@ -159,20 +281,44 @@ export default async function handler(req, res) {
 
         title = parsed.title;
         content = parsed.content;
-        updates.timeMax = parsed.timeMax;
-        updates.difficulty = parsed.difficulty;
-        updates.dietary = parsed.dietary;
 
-        // Convert include and exclude to arrays and rename to includeIngredients and excludeIngredients
-        if (parsed.include) {
-          updates.includeIngredients = parsed.include
-            .split(",")
-            .map((item) => item.trim());
+        if (hasOwn(parsed, "timeMax")) {
+          const timeResult = normalizeTimeField(parsed.timeMax);
+          if (timeResult.error) {
+            return res.status(400).json({ message: timeResult.error });
+          }
+          if (timeResult.unset) unsetFields.timeMax = "";
+          else updates.timeMax = timeResult.value;
         }
-        if (parsed.exclude) {
-          updates.excludeIngredients = parsed.exclude
-            .split(",")
-            .map((item) => item.trim());
+
+        if (hasOwn(parsed, "difficulty")) {
+          const difficultyValue = normalizeOptionalString(parsed.difficulty);
+          if (difficultyValue === null) unsetFields.difficulty = "";
+          else updates.difficulty = difficultyValue;
+        }
+
+        if (hasOwn(parsed, "dietary")) {
+          const dietaryValue = normalizeOptionalString(parsed.dietary);
+          if (dietaryValue === null) unsetFields.dietary = "";
+          else updates.dietary = dietaryValue;
+        }
+
+        if (hasOwn(parsed, "includeIngredients") || hasOwn(parsed, "include")) {
+          const includePayload = hasOwn(parsed, "includeIngredients")
+            ? parsed.includeIngredients
+            : parsed.include;
+          const includeValues = toStringArray(includePayload);
+          if (includeValues.length) updates.includeIngredients = includeValues;
+          else unsetFields.includeIngredients = "";
+        }
+
+        if (hasOwn(parsed, "excludeIngredients") || hasOwn(parsed, "exclude")) {
+          const excludePayload = hasOwn(parsed, "excludeIngredients")
+            ? parsed.excludeIngredients
+            : parsed.exclude;
+          const excludeValues = toStringArray(excludePayload);
+          if (excludeValues.length) updates.excludeIngredients = excludeValues;
+          else unsetFields.excludeIngredients = "";
         }
       }
 
@@ -194,17 +340,32 @@ export default async function handler(req, res) {
       // If photo uploaded, store as base64 in DB (works on deployed hosts)
       if (photoFile) {
         try {
-          const tempPath = photoFile.filepath || photoFile.path || photoFile.tempFilePath || photoFile.file?.path;
+          const tempPath =
+            photoFile.filepath ||
+            photoFile.path ||
+            photoFile.tempFilePath ||
+            photoFile.file?.path;
           const mimetype = photoFile.mimetype || photoFile.type || "image/jpeg";
 
           if (!tempPath || !fs.existsSync(tempPath)) {
-            console.error("Uploaded file temp path missing or not found:", { tempPath, photoFile });
-            return res.status(500).json({ message: "Uploaded file not found on server" });
+            console.error("Uploaded file temp path missing or not found:", {
+              tempPath,
+              photoFile,
+            });
+            return res
+              .status(500)
+              .json({ message: "Uploaded file not found on server" });
           }
 
           const buffer = fs.readFileSync(tempPath);
-          const base64Image = `data:${mimetype};base64,${buffer.toString("base64")}`;
-          try { fs.unlinkSync(tempPath); } catch (e) { /* ignore */ }
+          const base64Image = `data:${mimetype};base64,${buffer.toString(
+            "base64"
+          )}`;
+          try {
+            fs.unlinkSync(tempPath);
+          } catch (e) {
+            /* ignore */
+          }
 
           updateFields.photo = base64Image;
         } catch (err) {
@@ -213,8 +374,17 @@ export default async function handler(req, res) {
         }
       }
 
-      await db.collection("posts").updateOne({ _id: new ObjectId(postId) }, { $set: updateFields });
-      const updatedPost = await db.collection("posts").findOne({ _id: new ObjectId(postId) });
+      const updateOps = { $set: updateFields };
+      if (Object.keys(unsetFields).length) {
+        updateOps.$unset = unsetFields;
+      }
+
+      await db
+        .collection("posts")
+        .updateOne({ _id: new ObjectId(postId) }, updateOps);
+      const updatedPost = await db
+        .collection("posts")
+        .findOne({ _id: new ObjectId(postId) });
 
       return res.status(200).json({
         id: String(updatedPost._id),
@@ -227,8 +397,10 @@ export default async function handler(req, res) {
         timeMax: updatedPost.timeMax ?? null,
         difficulty: updatedPost.difficulty ?? null,
         dietary: updatedPost.dietary ?? null,
-        includeIngredients: updatedPost.includeIngredients ?? null,
-        excludeIngredients: updatedPost.excludeIngredients ?? null,
+        includeIngredients: toStringArray(updatedPost.includeIngredients),
+        excludeIngredients: toStringArray(updatedPost.excludeIngredients),
+        include: listToCsv(toStringArray(updatedPost.includeIngredients)),
+        exclude: listToCsv(toStringArray(updatedPost.excludeIngredients)),
       });
     }
 
@@ -238,4 +410,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ message: "Internal server error" });
   }
 }
-

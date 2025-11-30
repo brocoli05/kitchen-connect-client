@@ -2,14 +2,14 @@
 import Link from "next/link";
 import CommentSection from "@/components/CommentSection";
 import ChatWidget from "@/components/ChatWidget";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import api from "../../utils/api";
 import TopNavBar from "@/components/TopNavBar";
 import { Row, Col } from "react-bootstrap";
 import st from "@/styles/createPost.module.css";
 import Head from "next/head";
-
+import ReportPostModal from "@/components/ReportPostModal";
 
 // Social Media Share URL Helper
 const getSocialShareUrls = (title, url) => {
@@ -46,32 +46,123 @@ const sharePost = async (title, url, onFallbackNeeded) => {
 
 const GEOLOCATION_TIMEOUT = 8000;
 
-export default function PostPage({ post, notFound, postIdFromProps }) {
+const DIFFICULTY_OPTIONS = ["", "Easy", "Medium", "Hard"];
+
+const formatTimeValue = (value) => {
+  if (value === 0) return "0";
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed === "" ? "" : trimmed;
+  }
+  return "";
+};
+
+const formatListForInput = (value, fallback = "") => {
+  if (Array.isArray(value)) return value.join(", ");
+  if (typeof value === "string") return value;
+  if (Array.isArray(fallback)) return fallback.join(", ");
+  if (typeof fallback === "string") return fallback;
+  return "";
+};
+
+const resolveList = (value, fallback) => {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (Array.isArray(fallback)) return fallback.filter(Boolean);
+  const source = value ?? fallback;
+  return typeof source === "string"
+    ? source
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : [];
+};
+
+const splitInputList = (value) =>
+  String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const createFormState = (source = {}) => ({
+  title: source.title || "",
+  content: source.content || "",
+  time: formatTimeValue(source.timeMax),
+  difficulty: source.difficulty || "",
+  dietary: typeof source.dietary === "string" ? source.dietary : "",
+  include: formatListForInput(source.includeIngredients, source.include),
+  exclude: formatListForInput(source.excludeIngredients, source.exclude),
+});
+
+export default function PostPage({ post: initialPost, notFound, postIdFromProps }) {
+  const [postData, setPostData] = useState(initialPost);
+  const [form, setForm] = useState(() => createFormState(initialPost));
+  const [isSaving, setIsSaving] = useState(false);
+  const post = postData;
   const postId = post?.id;
   const router = useRouter();
 
-  const likingRef = useRef(false);
+  if (notFound || !post) {
+    return (
+      <>
+        <TopNavBar />
+        <div style={{ textAlign: 'center', padding: '50px' }}>
+          <h1>Post not found</h1>
+          <p>The post you're looking for doesn't exist.</p>
+          <Link href="/">Go back home</Link>
+        </div>
+      </>
+    );
+  }
+
   const [currentUser, setCurrentUser] = useState(null);
   const [isOwner, setIsOwner] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(typeof post.likeCount === "number" ? post.likeCount : 0);
+  const [likeCount, setLikeCount] = useState(
+    typeof post.likeCount === "number" ? post.likeCount : 0
+  );
   const [isEditing, setIsEditing] = useState(false);
   const [isReposted, setIsReposted] = useState(false);
-  const [repostCount, setRepostCount] = useState(typeof post.repostCount === "number" ? post.repostCount : 0);
-  const [form, setForm] = useState({
-    title: post.title || "",
-    content: post.content || "",
-  });
+  const [repostCount, setRepostCount] = useState(
+    typeof post.repostCount === "number" ? post.repostCount : 0
+  );
+  const includeList = resolveList(post?.includeIngredients, post?.include);
+  const excludeList = resolveList(post?.excludeIngredients, post?.exclude);
+  const metaCardStyle = {
+    flex: "1 1 180px",
+    border: "1px solid #eee",
+    borderRadius: 8,
+    padding: "12px 16px",
+    minWidth: 180,
+    background: "#fdfdfd",
+  };
+  const metaLabelStyle = { fontSize: 12, color: "#6b7280", marginBottom: 4 };
+  const metaValueStyle = { fontWeight: 600, fontSize: 16 };
+  const cookingTimeLabel =
+    post?.timeMax === 0 || (typeof post?.timeMax === "number" && Number.isFinite(post?.timeMax))
+      ? `${post.timeMax} min`
+      : post?.timeMax
+      ? `${post.timeMax} min`
+      : "Not specified";
+  const difficultyLabel = post?.difficulty || "Not specified";
+  const dietaryLabel = post?.dietary || "Not specified";
+  const includeDisplay = includeList.length ? includeList.join(", ") : "None";
+  const excludeDisplay = excludeList.length ? excludeList.join(", ") : "None";
   const [errors, setErrors] = useState({});
   const [isFavorited, setIsFavorited] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [showShareOptions, setShowShareOptions] = useState(false);
+  const likingRef = useRef(false);
   const currentUrl =
     typeof window !== "undefined"
       ? window.location.href
       : `https://kitchen-connect-client.vercel.app/posts/${postIdFromProps}`;
   const shareUrls = getSocialShareUrls(post.title, currentUrl);
-
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [blocking, setBlocking] = useState(false);
+  const [blockedPost, setBlockedPost] = useState(false);
+  const [blockedAuthor, setBlockedAuthor] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Repost
   useEffect(() => {
@@ -80,17 +171,18 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
 
     (async () => {
       try {
-        const res = await api.get(
-          `/posts/${postIdFromProps}/repost`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const res = await api.get(`/posts/${postIdFromProps}/repost`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setIsReposted(!!res.data.isReposted);
-        setRepostCount(typeof res.data.repostCount === "number" ? res.data.repostCount : 0);
+        setRepostCount(
+          typeof res.data.repostCount === "number" ? res.data.repostCount : 0
+        );
       } catch (e) {
         console.warn("fetchRepostStatus failed", e?.response?.status);
       }
     })();
-  }, [postIdFromProps]); 
+  }, [postIdFromProps]);
 
   const handleRepost = async () => {
     const token = localStorage.getItem("userToken");
@@ -120,23 +212,22 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
     }
   };
 
-
   // Like
   useEffect(() => {
     const token = localStorage.getItem("userToken");
     if (!token) return;
-  
+
     (async () => {
       try {
-        const res = await api.get(
-          `/posts/${postIdFromProps}/isLike`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const res = await api.get(`/posts/${postIdFromProps}/isLike`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setIsLiked(!!res.data.isLiked);
-        setLikeCount(typeof res.data.likeCount === "number" ? res.data.likeCount : 0);
+        setLikeCount(
+          typeof res.data.likeCount === "number" ? res.data.likeCount : 0
+        );
       } catch (e) {
         console.warn("fetchLikeStatus failed", e?.response?.status);
-       
       }
     })();
   }, [postIdFromProps]);
@@ -155,7 +246,8 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       setIsLiked(!!res.data.isLiked);
-      if (typeof res.data.likeCount === "number") setLikeCount(res.data.likeCount);
+      if (typeof res.data.likeCount === "number")
+        setLikeCount(res.data.likeCount);
     } catch (e) {
       setIsLiked(prev.isLiked);
       setLikeCount(prev.likeCount);
@@ -171,11 +263,21 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         setCurrentUser(data);
-        if (data && post?.authorId && String(data.id) === String(post.authorId)) {
+        const postAuthorId =
+          post?.authorId ??
+          post?.author?.id ??
+          post?.author?._id ??
+          post?.authorId;
+        if (data && postAuthorId && String(data.id) === String(postAuthorId)) {
           setIsOwner(true);
+        } else {
+          setIsOwner(false);
+        }
+        if (data && (data.role === "admin" || data.isAdmin === true)) {
+          setIsAdmin(true);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [post]);
 
   if (notFound || !post) {
@@ -257,60 +359,18 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
       fileInput.value = "";
     }
   };
-
-  // Open Google Maps directly. If geolocation is available and permitted, center on user's location.
-  const openGoogleMaps = (query = "grocery store") => {
-    const q = encodeURIComponent(query || "grocery store");
-
-    const openUrl = (lat, lng) => {
-      let url;
-      if (lat != null && lng != null) {
-        url = `https://www.google.com/maps/search/${q}/@${lat},${lng},14z`;
-      } else {
-        url = `https://www.google.com/maps/search/${q}`;
-      }
-      window.open(url, "_blank");
-    };
-
-    if (typeof navigator !== "undefined" && navigator.geolocation) {
-      const called = { v: false };
-      const timer = setTimeout(() => {
-        if (!called.v) {
-          called.v = true;
-          openUrl(); // fallback without coords
-        }
-      }, GEOLOCATION_TIMEOUT);
-
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          if (called.v) return;
-          called.v = true;
-          clearTimeout(timer);
-          openUrl(pos.coords.latitude, pos.coords.longitude);
-        },
-        (err) => {
-          if (called.v) return;
-          called.v = true;
-          clearTimeout(timer);
-          openUrl();
-        },
-        { enableHighAccuracy: true, timeout: 7000 }
-      );
-    } else {
-      // No geolocation available
-      openUrl();
-    }
-  };
   const startEdit = () => {
-    setForm({ title: post.title || "", content: post.content || "" });
+    setForm(createFormState(post));
     setErrors({});
     setIsEditing(true);
   };
 
   const cancelEdit = () => {
+    setForm(createFormState(post));
     setIsEditing(false);
     setErrors({});
-    setSelectedImage(null); // Clear selected image when cancelling
+    setSelectedImage(null);
+    setIsSaving(false);
   };
 
   const onChange = (e) => {
@@ -320,66 +380,108 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
   };
 
   const saveEdit = async () => {
-    // Client-side validation
     const newErrors = {};
-    if (!form.title || form.title.trim() === "")
-      newErrors.title = "Title is required";
-    if (!form.content || form.content.trim() === "")
-      newErrors.content = "Content is required";
+    const trimmedTitle = form.title?.trim() || "";
+    const trimmedContent = form.content?.trim() || "";
+    const parsedTime = form.time === "" ? null : Number(form.time);
+    if (!trimmedTitle) newErrors.title = "Title is required";
+    if (!trimmedContent) newErrors.content = "Content is required";
+    if (form.time !== "" && (!Number.isFinite(parsedTime) || parsedTime < 0)) {
+      newErrors.time = "Cooking time must be zero or a positive number";
+    }
+    if (form.difficulty && !DIFFICULTY_OPTIONS.includes(form.difficulty)) {
+      newErrors.difficulty = "Difficulty must be Easy, Medium, or Hard";
+    }
+    const dietaryTags = splitInputList(form.dietary);
+    const invalidDietary = dietaryTags.filter(
+      (tag) => !/^[a-zA-Z\s-]+$/.test(tag)
+    );
+    if (invalidDietary.length) {
+      newErrors.dietary = `Unsupported dietary tags: ${invalidDietary.join(", ")}`;
+    }
+
     if (Object.keys(newErrors).length) {
       setErrors(newErrors);
       return;
     }
 
+    setErrors({});
+    setIsSaving(true);
+
+    const includeList = splitInputList(form.include);
+    const excludeList = splitInputList(form.exclude);
+    const payload = {
+      title: trimmedTitle,
+      content: trimmedContent,
+      timeMax: parsedTime ?? "",
+      difficulty: form.difficulty,
+      dietary: dietaryTags.join(", "),
+      include: includeList.join(", "),
+      exclude: excludeList.join(", "),
+    };
+
     const token =
       typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
+
     try {
       let resp;
 
       if (selectedImage) {
-        // If there's an image, use FormData
         const formData = new FormData();
-        formData.append("title", form.title);
-        formData.append("content", form.content);
+        Object.entries(payload).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            formData.append(key, value === null ? "" : String(value));
+          }
+        });
         formData.append("photo", selectedImage);
 
         resp = await fetch(`/api/posts/${postId}`, {
           method: "PUT",
-          headers: { Authorization: `Bearer ${token}` }, // Don't set Content-Type for FormData
+          headers: { Authorization: `Bearer ${token}` },
           body: formData,
         });
       } else {
-        // No image - use regular JSON approach
         resp = await fetch(`/api/posts/${postId}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ title: form.title, content: form.content }),
+          body: JSON.stringify(payload),
         });
       }
 
       const data = await resp.json();
       if (resp.ok) {
-        // Update UI
-        post.title = data.title;
-        post.content = data.content;
-        if (data.photoUrl) {
-          post.photoUrl = data.photoUrl; // Update photo if new one was uploaded
-        }
-        setIsEditing(false);
-        setSelectedImage(null); // Clear selected image
-        alert("Post updated");
+        const updatedPost = {
+          ...post,
+          title: data.title,
+          content: data.content,
+          photo: data.photo || data.photoUrl || post.photo,
+          timeMax: data.timeMax ?? null,
+          difficulty: data.difficulty ?? "",
+          dietary: data.dietary ?? "",
+          includeIngredients: Array.isArray(data.includeIngredients)
+            ? data.includeIngredients
+            : includeList,
+          excludeIngredients: Array.isArray(data.excludeIngredients)
+            ? data.excludeIngredients
+            : excludeList,
+        };
 
-        // Refresh the page to show updated image
-        window.location.reload();
+        setPostData(updatedPost);
+        setForm(createFormState(updatedPost));
+        setIsEditing(false);
+        setSelectedImage(null);
+        alert("Post updated");
       } else {
         alert(data.message || "Failed to update post");
       }
     } catch (e) {
       console.error(e);
       alert("Failed to update post. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -402,46 +504,6 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
     checkFavorite();
   }, [postIdFromProps]);
 
-  // Record a 'view' activity for this post in the user's history.
-  // Prevent duplicate records when navigating back/forward by
-  // remembering viewed posts in sessionStorage for the browser session.
-  useEffect(() => {
-    const recordView = async () => {
-      if (typeof window === "undefined") return;
-
-      // Only send once per browser session for this postId
-      const sessionKey = `viewed_post_${postIdFromProps}`;
-      try {
-        if (sessionStorage.getItem(sessionKey)) return;
-      } catch (e) {
-        // sessionStorage might be unavailable in some environments; swallow
-      }
-
-      const token = localStorage.getItem("userToken");
-      if (!token) return;
-
-      try {
-        await api.post("/users/history", {
-          type: "view",
-          postId: postIdFromProps,
-          title: post.title || null,
-        });
-
-        // mark as recorded for this session so back-button won't re-send
-        try {
-          sessionStorage.setItem(sessionKey, String(Date.now()));
-        } catch (e) {
-          // ignore storage errors
-        }
-      } catch (e) {
-        // don't block page load if recording fails
-        console.error("Failed to record view history", e);
-      }
-    };
-
-    if (router.isReady) recordView();
-  }, [postIdFromProps, post.title, router.isReady]);
-
   const handleSaveButton = async () => {
     const token = localStorage.getItem("userToken");
     if (!token) {
@@ -460,26 +522,6 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
 
   return (
     <>
-      <Head>
-        <title>{post.title}</title>
-        {/* Ensure your live domain is used here for absolute URLs */}
-        <meta property="og:title" content={post.title} />
-        <meta
-          property="og:description"
-          content={post.content.substring(0, 150) + "..."}
-        />
-        <meta property="og:url" content={currentUrl} />
-        {/* Replace YOUR_DEFAULT_IMAGE_URL with your absolute image path */}
-        <meta
-          property="og:image"
-          content={
-            post.photo ||
-            "https://kitchen-connect-client.vercel.app/images/default-recipe.png"
-          }
-        />
-        <meta property="og:type" content="article" />
-        <meta name="twitter:card" content="summary_large_image" />
-      </Head>
       <TopNavBar />
       <div style={{ maxWidth: 820, margin: "72px auto", padding: "0 16px" }}>
         <Link href="/">← Back</Link>
@@ -503,75 +545,163 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
                 minute: "2-digit",
                 second: "2-digit",
                 hour12: true,
-              })}
+              })}{" "}
+              by{" "}
+              {post.author ? (
+                <Link
+                  href={`/users/${post.author.id}`}
+                  style={{
+                    fontWeight: 600,
+                    color: "#333",
+                    textDecoration: "underline",
+                  }}
+                >
+                  {post.author.name || "Unknown"}
+                </Link>
+              ) : (
+                <span style={{ fontWeight: 600, color: "#333" }}>Unknown</span>
+              )}
             </p>
+            {/* Report button */}
             <button
-            type="button"                  
-            onClick={async () => {
-              if (likingRef.current) return;  
-              likingRef.current = true;
+              type="button"
+              onClick={() => setShowReportModal(true)}
+              style={{
+                padding: "8px 16px",
+                fontSize: 16,
+                border: "1px solid #dc2626",
+                borderRadius: 4,
+                backgroundColor: "#fff",
+                color: "#dc2626",
+                cursor: "pointer",
+              }}
+            >
+              🚩 Report
+            </button>
 
-              const token = localStorage.getItem("userToken");
-              if (!token) {
-                
-                console.warn("Please log in to like this post");
-                likingRef.current = false;
-                return;
-              }
-
-              try {
-              
-                const res = await api.post(
-                  `/posts/${postIdFromProps}/isLike`,
-                  null,
-                  { headers: { Authorization: `Bearer ${token}` } }
-                );
-
-                if (res?.data) {
-                  setIsLiked(!!res.data.isLiked);
-                  if (typeof res.data.likeCount === "number") setLikeCount(res.data.likeCount);
+            {/* Block post (toggle) */}
+            <button
+              type="button"
+              disabled={blocking}
+              onClick={async () => {
+                const token =
+                  typeof window !== "undefined"
+                    ? localStorage.getItem("userToken")
+                    : null;
+                if (!token) {
+                  alert("Please log in to block posts.");
+                  return;
                 }
-              } catch (err) {
-                console.error("like failed:", err?.response?.status, err?.response?.data || err.message);
-                
-              } finally {
-                likingRef.current = false;
-              }
-            }}
-            style={{
-              padding: "8px 16px",
-              fontSize: 16,
-              border: "1px solid #333",
-              borderRadius: 4,
-              backgroundColor: isLiked ? "#e11d48" : "#fff",
-              color: isLiked ? "#fff" : "#333",
-              cursor: "pointer",
-              fontWeight: isLiked ? "bold" : "normal",
-            }}
-          >
-            ❤️ {isLiked ? "Liked" : "Like"}{typeof likeCount === "number" ? ` (${likeCount})` : ""}
-          </button>
-          <button
-            type="button"
-            onClick={handleRepost}
-            disabled={isOwner}                
-            title={isOwner ? "You cannot repost your own post" : ""}
-            style={{
-              padding: "8px 16px",
-              fontSize: 16,
-              border: "1px solid #333",
-              borderRadius: 4,
-              backgroundColor: isReposted ? "#0ea5e9" : "#fff",
-              color: isOwner ? "#aaa" : (isReposted ? "#fff" : "#333"),
-              cursor: isOwner ? "not-allowed" : "pointer",
-              fontWeight: isReposted ? "bold" : "normal",
-              marginLeft: 8,
-              opacity: isOwner ? 0.6 : 1,
-            }}
-          >
-            🔁 {isReposted ? "Reposted" : "Repost"}
-            {typeof repostCount === "number" ? ` (${repostCount})` : ""}
-          </button>
+                setBlocking(true);
+                try {
+                  const res = await fetch(`/api/posts/${postIdFromProps}/block`, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ scope: "post" }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) {
+                    alert(data.message || "Failed to update block.");
+                  } else {
+                    setBlockedPost(data.blocked);
+                    alert(
+                      data.blocked
+                        ? "This post is now blocked and will be hidden from your feed."
+                        : "This post is unblocked."
+                    );
+                  }
+                } catch (e) {
+                  console.error("block post failed", e);
+                  alert("Failed to block post.");
+                } finally {
+                  setBlocking(false);
+                }
+              }}
+              style={{
+                padding: "8px 16px",
+                fontSize: 16,
+                border: "1px solid #6b7280",
+                borderRadius: 4,
+                backgroundColor: blockedPost ? "#6b7280" : "#fff",
+                color: blockedPost ? "#fff" : "#374151",
+                cursor: blocking ? "default" : "pointer",
+              }}
+            >
+              {blockedPost ? "Blocked post" : "Block post"}
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                if (likingRef.current) return;
+                likingRef.current = true;
+
+                const token = localStorage.getItem("userToken");
+                if (!token) {
+                  console.warn("Please log in to like this post");
+                  likingRef.current = false;
+                  return;
+                }
+
+                try {
+                  const res = await api.post(
+                    `/posts/${postIdFromProps}/isLike`,
+                    null,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                  );
+
+                  if (res?.data) {
+                    setIsLiked(!!res.data.isLiked);
+                    if (typeof res.data.likeCount === "number")
+                      setLikeCount(res.data.likeCount);
+                  }
+                } catch (err) {
+                  console.error(
+                    "like failed:",
+                    err?.response?.status,
+                    err?.response?.data || err.message
+                  );
+                } finally {
+                  likingRef.current = false;
+                }
+              }}
+              style={{
+                padding: "8px 16px",
+                fontSize: 16,
+                border: "1px solid #333",
+                borderRadius: 4,
+                backgroundColor: isLiked ? "#e11d48" : "#fff",
+                color: isLiked ? "#fff" : "#333",
+                cursor: "pointer",
+                fontWeight: isLiked ? "bold" : "normal",
+              }}
+            >
+              ❤️ {isLiked ? "Liked" : "Like"}
+              {typeof likeCount === "number" ? ` (${likeCount})` : ""}
+            </button>
+            <button
+              type="button"
+              onClick={handleRepost}
+              disabled={isOwner}
+              title={isOwner ? "You cannot repost your own post" : ""}
+              style={{
+                padding: "8px 16px",
+                fontSize: 16,
+                border: "1px solid #333",
+                borderRadius: 4,
+                backgroundColor: isReposted ? "#0ea5e9" : "#fff",
+                color: isOwner ? "#aaa" : isReposted ? "#fff" : "#333",
+                cursor: isOwner ? "not-allowed" : "pointer",
+                fontWeight: isReposted ? "bold" : "normal",
+                marginLeft: 8,
+                opacity: isOwner ? 0.6 : 1,
+              }}
+            >
+              🔁 {isReposted ? "Reposted" : "Repost"}
+              {typeof repostCount === "number" ? ` (${repostCount})` : ""}
+            </button>
             <div style={{ display: "flex", gap: 8, position: "relative" }}>
               {/* Save Button */}
               <button
@@ -695,6 +825,57 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
           </div>
         )}
 
+        {/* Constraints & Preferences (read-only) */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+            gap: 8,
+            border: "1px solid #eee",
+            background: "#f9fafb",
+            padding: 12,
+            borderRadius: 8,
+            marginBottom: 12,
+          }}
+          aria-label="Recipe constraints and preferences"
+        >
+          <div style={{ fontSize: 13, color: "#374151" }}>
+            <strong style={{ display: "block", color: "#111827" }}>Cooking Time</strong>
+            {typeof post.timeMax === "number" && post.timeMax > 0 ? `${post.timeMax} min` : "—"}
+          </div>
+          <div style={{ fontSize: 13, color: "#374151" }}>
+            <strong style={{ display: "block", color: "#111827" }}>Difficulty</strong>
+            {post.difficulty || "—"}
+          </div>
+          <div style={{ fontSize: 13, color: "#374151" }}>
+            <strong style={{ display: "block", color: "#111827" }}>Dietary</strong>
+            {post.dietary ? (
+              <span
+                style={{
+                  display: "inline-block",
+                  background: "#e0f2fe",
+                  color: "#0369a1",
+                  border: "1px solid #bae6fd",
+                  borderRadius: 9999,
+                  padding: "2px 8px",
+                }}
+              >
+                {post.dietary}
+              </span>
+            ) : (
+              "—"
+            )}
+          </div>
+          <div style={{ fontSize: 13, color: "#374151" }}>
+            <strong style={{ display: "block", color: "#111827" }}>Include</strong>
+            {includeDisplay || "—"}
+          </div>
+          <div style={{ fontSize: 13, color: "#374151" }}>
+            <strong style={{ display: "block", color: "#111827" }}>Exclude</strong>
+            {excludeDisplay || "—"}
+          </div>
+        </div>
+
         <article
           style={{
             whiteSpace: "pre-wrap",
@@ -751,9 +932,7 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
 
             {isEditing && (
               <div style={{ marginTop: 12, width: "100%" }}>
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
-                >
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <input
                     name="title"
                     value={form.title}
@@ -775,72 +954,150 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
                   {errors.content && (
                     <div style={{ color: "red" }}>{errors.content}</div>
                   )}
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {/* Image Upload Section*/}
-                    <Row className={st.imageUploadSection}>
-                      <Col md={3}>
-                        <label htmlFor="imageUpload">
-                          Add Photo (Optional):
-                        </label>
-                      </Col>
-                      <Col md={9}>
-                        <input
-                          type="file"
-                          id="imageUpload"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          style={{ margin: "10px 0", display: "block" }}
-                        />
-                        {/* Show selected file name and remove button */}
-                        {selectedImage && (
-                          <div
+
+                  <Row>
+                    <Col style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <label>Cooking Time (minutes)</label>
+                      <input
+                        name="time"
+                        type="number"
+                        min="0"
+                        value={form.time}
+                        onChange={onChange}
+                        placeholder="e.g., 30"
+                        className={st.input}
+                      />
+                      {errors.time && (
+                        <div style={{ color: "red" }}>{errors.time}</div>
+                      )}
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <label>Difficulty</label>
+                      <select
+                        name="difficulty"
+                        value={form.difficulty}
+                        onChange={onChange}
+                        className={st.input}
+                      >
+                        {DIFFICULTY_OPTIONS.map((opt) => (
+                          <option key={opt || "none"} value={opt}>
+                            {opt ? opt : "Select difficulty"}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.difficulty && (
+                        <div style={{ color: "red" }}>{errors.difficulty}</div>
+                      )}
+                    </Col>
+                    <Col style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <label>Dietary Tags</label>
+                      <input
+                        name="dietary"
+                        type="text"
+                        value={form.dietary}
+                        onChange={onChange}
+                        placeholder="e.g., vegan, halal"
+                        className={st.input}
+                      />
+                      {errors.dietary && (
+                        <div style={{ color: "red" }}>{errors.dietary}</div>
+                      )}
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <label>Include Ingredients</label>
+                      <input
+                        name="include"
+                        type="text"
+                        value={form.include}
+                        onChange={onChange}
+                        placeholder="e.g., chicken, cheese"
+                        className={st.input}
+                      />
+                    </Col>
+                    <Col style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <label>Exclude Ingredients</label>
+                      <input
+                        name="exclude"
+                        type="text"
+                        value={form.exclude}
+                        onChange={onChange}
+                        placeholder="e.g., nuts, gluten"
+                        className={st.input}
+                      />
+                    </Col>
+                  </Row>
+
+                  <Row className={st.imageUploadSection}>
+                    <Col md={3}>
+                      <label htmlFor="imageUpload">Add Photo (Optional):</label>
+                    </Col>
+                    <Col md={9}>
+                      <input
+                        type="file"
+                        id="imageUpload"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        style={{ margin: "10px 0", display: "block" }}
+                      />
+                      {selectedImage && (
+                        <div
+                          style={{
+                            marginTop: "10px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                          }}
+                        >
+                          <span
                             style={{
-                              marginTop: "10px",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "10px",
+                              color: "#28a745",
+                              fontSize: "14px",
+                              fontWeight: "500",
                             }}
                           >
-                            <span
-                              style={{
-                                color: "#28a745",
-                                fontSize: "14px",
-                                fontWeight: "500",
-                              }}
-                            >
-                              ✓ {selectedImage.name}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={removeImage}
-                              style={{
-                                background: "#dc3545",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "4px",
-                                padding: "4px 8px",
-                                fontSize: "12px",
-                                cursor: "pointer",
-                              }}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        )}
-                      </Col>
-                    </Row>
+                            ✓ {selectedImage.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={removeImage}
+                            style={{
+                              background: "#dc3545",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "4px",
+                              padding: "4px 8px",
+                              fontSize: "12px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </Col>
+                  </Row>
 
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <button
                       onClick={saveEdit}
+                      disabled={isSaving}
                       style={{
                         background: "#10b981",
                         color: "#fff",
                         padding: "8px 12px",
                         border: "none",
                         borderRadius: 6,
+                        opacity: isSaving ? 0.7 : 1,
+                        cursor: isSaving ? "not-allowed" : "pointer",
                       }}
                     >
-                      Save
+                      {isSaving ? "Saving..." : "Save"}
                     </button>
                     <button
                       onClick={cancelEdit}
@@ -866,12 +1123,12 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
           <button
             onClick={() => openGoogleMaps()}
             style={{
-              background: '#2563eb',
-              color: '#fff',
-              padding: '8px 12px',
-              border: 'none',
+              background: "#2563eb",
+              color: "#fff",
+              padding: "8px 12px",
+              border: "none",
               borderRadius: 6,
-              cursor: 'pointer'
+              cursor: "pointer",
             }}
           >
             Find nearby stores
@@ -883,10 +1140,16 @@ export default function PostPage({ post, notFound, postIdFromProps }) {
           <h2 style={{ marginBottom: 20 }}>Comments</h2>
           {postId && <CommentSection postId={postId} />}
         </section>
-        {/* Chat widget (floating) */}
+        {/* Floating chat widget (respects AI disable flag) */}
         <ChatWidget contextId={postId} />
+        <ReportPostModal
+          postId={postIdFromProps}
+          open={showReportModal}
+          onClose={() => setShowReportModal(false)}
+        />
       </div>
     </>
+
   );
 }
 

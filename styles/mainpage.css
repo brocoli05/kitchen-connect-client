@@ -8,15 +8,17 @@
   font-weight: bold;
   font-size: 24px;
 }
+
 .mainpage-left-toggle-list {
-  width: 240px;
+  width: 100%;
 }
+
 .list-title {
   color: black;
   margin-bottom: 8px;
   border: none;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 800;
   background-color: transparent;
 }
 
@@ -27,34 +29,259 @@
   background-color: #000000;
   color: white;
 }
+
 .quick-post {
   /* width: 100%; */
   border: 15px solid #e0e0e0;
   border-radius: 8px;
 }
+
 .mainpage-left,
 .mainpage-right,
 .mainpage-center {
   border: 1px solid #e0e0e0;
   padding-top: 10px;
 }
+
 .profile-contact-img {
   width: 50px;
   height: 50px;
   border-radius: 50%;
 }
+
 .profile-contact-name {
   font-weight: bold;
   font-size: 18px;
   margin: 0;
   justify-content: start;
 }
+
 .profile-contact-bio {
   font-size: 14px;
   color: gray;
   margin: 0;
 }
+
 .feed-row {
   max-width: 240px;
   padding-left: 20px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.pagination button {
+  width: 35px;
+  height: 40px;
+  /* post-button과 비슷하게 */
+  border-radius: 10px;
+  background-color: #000000;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---------- Explore Table ---------- */
+.exploreTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.exploreTable th {
+  background-color: #111827;
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  text-align: left;
+  padding: 12px 16px;
+}
+
+.exploreTable td {
+  font-size: 14px;
+  color: #4b5563;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.exploreTable tr:hover td {
+  background-color: #f9fafb;
+}
+
+/* ---------- Pager ---------- */
+.pager {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.pagerBtn {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #111827;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease,
+    transform 80ms ease, box-shadow 160ms ease, color 160ms ease;
+}
+
+.pagerBtn:hover {
+  border-color: #111827;
+  background: #111827;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.pagerBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: #f9fafb;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+}
+
+a.author-link {
+  font-weight: 600;
+  color: #333;
+  text-decoration: none;
+}
+
+a.author-link:hover {
+  text-decoration: underline;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.pagination button {
+  width: 35px;
+  height: 40px;
+  /* post-button과 비슷하게 */
+  border-radius: 10px;
+  background-color: #000000;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---------- Explore Table ---------- */
+.exploreTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.exploreTable th {
+  background-color: #111827;
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  text-align: left;
+  padding: 12px 16px;
+}
+
+.exploreTable td {
+  font-size: 14px;
+  color: #4b5563;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.exploreTable tr:hover td {
+  background-color: #f9fafb;
+}
+
+/* ---------- Pager ---------- */
+.pager {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.pagerBtn {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #111827;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease,
+    transform 80ms ease, box-shadow 160ms ease, color 160ms ease;
+}
+
+.pagerBtn:hover {
+  border-color: #111827;
+  background: #111827;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.pagerBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: #f9fafb;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+}
+
+a.author-link {
+  font-weight: 600;
+  color: #333;
+  text-decoration: none;
+}
+
+a.author-link:hover {
+  text-decoration: underline;
+}
+
+.list-item {
+  list-style: none;
+}
+
+.list-link {
+  display: block;
+  width: 100%;
+  font-weight: 600;
+  padding: 8px 8px 8px 0px;
+  text-align: left;
+  background: none;
+  border: none;
+  color: black;
+}
+
+.list-item:hover .list-link {
+  text-decoration: none;
+  cursor: pointer;
+  background-color: #f7f7f75c;
 }
