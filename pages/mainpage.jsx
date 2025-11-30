@@ -213,19 +213,51 @@ export default function Home() {
           const postsResponse = await fetch(`/api/users/${user.id}/posts`);
           if (postsResponse.ok) {
             const posts = await postsResponse.json();
-            console.log('Posts data:', posts); 
-            
+            console.log("Posts data:", posts);
 
+            let items;
             if (posts.items && Array.isArray(posts.items)) {
-              setUserPosts(posts.items);
+              items = posts.items;
             } else if (Array.isArray(posts)) {
-              setUserPosts(posts);
+              items = posts;
             } else {
-              console.error('Posts response is not an array:', posts);
-              setUserPosts([]); 
+              console.error("Posts response is not an array:", posts);
+              setUserPosts([]);
+              return; 
             }
+            let blockedPosts = [];
+            let blockedUsers = [];
+            try {
+              const blocksRes = await fetch("/api/users/blocks", {
+                headers: {
+                  Authorization: `Bearer ${token}`, 
+                },
+              });
+
+              if (blocksRes.ok) {
+                const b = await blocksRes.json();
+                blockedPosts = (b.blockedPosts || []).map(String);
+                blockedUsers = (b.blockedUsers || []).map(String);
+              } else {
+                console.warn("Failed to fetch blocks:", blocksRes.status);
+              }
+            } catch (e) {
+              console.error("Error fetching blocks", e);
+            }
+
+            const filtered = items.filter((p) => {
+              const postId = String(p._id || p.id || "");
+              const authorId = p.authorId ? String(p.authorId) : null;
+
+              if (postId && blockedPosts.includes(postId)) return false;
+              if (authorId && blockedUsers.includes(authorId)) return false;
+
+              return true;
+            });
+
+            setUserPosts(filtered);
           } else {
-            console.error('Failed to fetch posts:', postsResponse.status);
+            console.error("Failed to fetch posts:", postsResponse.status);
             setUserPosts([]);
           }
 
