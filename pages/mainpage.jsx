@@ -5,63 +5,87 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import PostCard from "@/components/PostCard";
 import Link from "next/link";
+const GEOLOCATION_TIMEOUT = 8000;
 
 function ToggleList({ title }) {
   const [open, setOpen] = useState(true);
   return (
     <div className="mainpage-left-toggle-list">
-      <button onClick={() => setOpen((prev) => !prev)} className="list-title">
-        {title}
-      </button>
+	<Row 
+	style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+	onClick={() => setOpen(prev => !prev)}
+	className="list-title"
+	>
+		<span style={{width: "80%"}}>{title}</span>
+
+	<span style={{ fontSize: "20px", width: "20%", fontFamily: "monospace" }}>
+		{open ? "⌃" : "⌄"}
+	</span>
+	</Row>
       {open && title === "Discover" && (
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-          <li>
-            <a href="#/action-1">Home</a>
+		<li className="list-item">
+		<a className="list-link" href="/">
+			<span style={{ marginRight: "18px" }}>🏠</span>
+			Home
+		</a>
+		</li>
+          <li className="list-item">
+            <a className="list-link" href="#/action-2">
+			<span style={{ marginRight: "18px" }}>🔎</span>
+			Browse
+			</a>
           </li>
-          <li>
-            <a href="#/action-2">Browse</a>
-          </li>
-          <li>
-            <a href="#/action-3">Explore</a>
+          <li className="list-item">
+            <a className="list-link" href="#/action-1"><span style={{ marginRight: "18px" }}>🌎</span>Explore</a>
           </li>
         </ul>
       )}
       {open && title === "Personal" && (
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-          <li>
-            <a href="#/action-1">Notifications</a>
+          <li className="list-item">
+            <a className="list-link" href="#/action-1"><span style={{ marginRight: "18px" }}>🔔</span>Notifications</a>
           </li>
-          <li>
-            <a href="/posts/favorite">Favorites</a>
+          <li className="list-item">
+            <a className="list-link" href="/posts/favorite"><span style={{ marginRight: "18px" }}>🔖</span>Favorites</a>
           </li>
-          <li>
-            <a href="#/action-3">Lists</a>
+          <li className="list-item">
+            <a className="list-link" href="#/action-3"><span style={{ marginRight: "18px" }}>📙</span>Lists</a>
           </li>
-              <li>
-                <a href="/history">History</a>
+              <li className="list-item">
+                <a className="list-link" href="/history"><span style={{ marginRight: "18px" }}>👣</span>History</a>
               </li>
         </ul>
       )}
       {open && title === "Kitchen" && (
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-          <li>
-            <a href="/recipes">Recipes</a>
+          <li className="list-item">
+            <a className="list-link" href="/recipes"><span style={{ marginRight: "18px" }}>🍎</span>Recipes</a>
           </li>
-          <li>
-            <a href="/messages">Messages</a>
+          <li className="list-item">
+            <Link className="list-link" href="/messages">
+              <span style={{ marginRight: "18px" }}>💬</span>
+              Messages
+            </Link>
           </li>
-          <li>
-            <a href="#/action-2">Recommended</a>
+          <li className="list-item">
+            <a className="list-link" href="#/action-3"><span style={{ marginRight: "18px" }}>🔥</span>Trending</a>
           </li>
-          <li>
-            <a href="#/action-3">Trending</a>
-          </li>
-          <li>
-            <a href="#/action-4">Resources</a>
+          <li className="list-item">
+            <button
+            onClick={() => openGoogleMaps()}
+            style={{
+              border: 'none',
+              backgroundColor: "inherit",
+            }}
+			className="list-link"
+			>
+				<span style={{ marginRight: "18px" }}>🥕</span>Resources
+			</button>
           </li>
         </ul>
       )}
-      <button onClick={() => setOpen((prev) => !prev)}></button>
+
     </div>
   );
 }
@@ -86,6 +110,49 @@ function Contact({ user }) {
     </Row>
   );
 }
+  // Open Google Maps directly. If geolocation is available and permitted, center on user's location.
+  const openGoogleMaps = (query = "grocery store") => {
+    const q = encodeURIComponent(query || "grocery store");
+
+    const openUrl = (lat, lng) => {
+      let url;
+      if (lat != null && lng != null) {
+        url = `https://www.google.com/maps/search/${q}/@${lat},${lng},14z`;
+      } else {
+        url = `https://www.google.com/maps/search/${q}`;
+      }
+      window.open(url, "_blank");
+    };
+
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      const called = { v: false };
+      const timer = setTimeout(() => {
+        if (!called.v) {
+          called.v = true;
+          openUrl(); // fallback without coords
+        }
+      }, GEOLOCATION_TIMEOUT);
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (called.v) return;
+          called.v = true;
+          clearTimeout(timer);
+          openUrl(pos.coords.latitude, pos.coords.longitude);
+        },
+        (err) => {
+          if (called.v) return;
+          called.v = true;
+          clearTimeout(timer);
+          openUrl();
+        },
+        { enableHighAccuracy: true, timeout: 7000 }
+      );
+    } else {
+      // No geolocation available
+      openUrl();
+    }
+  };
 export default function Home() {
   const router = useRouter();
   const [userPosts, setUserPosts] = useState([]);
@@ -232,7 +299,7 @@ export default function Home() {
           <ToggleList title="Discover" />
           <ToggleList title="Personal" />
           <ToggleList title="Kitchen" />
-          <Row className="d-flex justify-content-center">
+          <Row className="d-flex justify-content-center m-3" >
             <button
               className="post-button "
               onClick={() => router.push("/posts/create")}
@@ -243,25 +310,6 @@ export default function Home() {
         </Col>
 
         <Col md={7} className="mainpage-center ">
-          {/* <Row className="quick-post d-flex justify-content-center m-1">
-
-            <Col
-              md={10}
-              className="d-flex align-items-center quick-post"
-              style={{ border: "none" }}
-            >
-              <input
-                type="text"
-                placeholder="What's on your mind?"
-                style={{ width: "100%", border: "none", borderRadius: "4px" }}
-              />
-            </Col>
-            <Col md={2} className="d-flex justify-content-end">
-              <img src={"/mic.svg"} alt="mic" />
-              <img src={"/mood.svg"} alt="mood" />
-              <img src={"/photo.svg"} alt="photo" />
-            </Col>
-          </Row> */}
           <Row className="m-5 d-flex justify-content-center">
             {/* Display user's own posts */}
             {Array.isArray(userPosts) && userPosts.length > 0 ? (
