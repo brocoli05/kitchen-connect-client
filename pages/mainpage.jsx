@@ -7,34 +7,34 @@ import PostCard from "@/components/PostCard";
 import Link from "next/link";
 const GEOLOCATION_TIMEOUT = 8000;
 
-function ToggleList({ title }) {
+function ToggleList({ title, isAdmin = false }) {
   const [open, setOpen] = useState(true);
   return (
     <div className="mainpage-left-toggle-list">
-	<Row 
-	style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-	onClick={() => setOpen(prev => !prev)}
-	className="list-title"
-	>
-		<span style={{width: "80%"}}>{title}</span>
+      <Row
+        style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+        onClick={() => setOpen(prev => !prev)}
+        className="list-title"
+      >
+        <span style={{ width: "80%" }}>{title}</span>
 
-	<span style={{ fontSize: "20px", width: "20%", fontFamily: "monospace" }}>
-		{open ? "⌃" : "⌄"}
-	</span>
-	</Row>
+        <span style={{ fontSize: "20px", width: "20%", fontFamily: "monospace" }}>
+          {open ? "⌃" : "⌄"}
+        </span>
+      </Row>
       {open && title === "Discover" && (
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-		<li className="list-item">
-		<a className="list-link" href="/">
-			<span style={{ marginRight: "18px" }}>🏠</span>
-			Home
-		</a>
-		</li>
+          <li className="list-item">
+            <a className="list-link" href="/">
+              <span style={{ marginRight: "18px" }}>🏠</span>
+              Home
+            </a>
+          </li>
           <li className="list-item">
             <a className="list-link" href="#/action-2">
-			<span style={{ marginRight: "18px" }}>🔎</span>
-			Browse
-			</a>
+              <span style={{ marginRight: "18px" }}>🔎</span>
+              Browse
+            </a>
           </li>
           <li className="list-item">
             <a className="list-link" href="#/action-1"><span style={{ marginRight: "18px" }}>🌎</span>Explore</a>
@@ -52,9 +52,9 @@ function ToggleList({ title }) {
           <li className="list-item">
             <a className="list-link" href="#/action-3"><span style={{ marginRight: "18px" }}>📙</span>Lists</a>
           </li>
-              <li className="list-item">
-                <a className="list-link" href="/history"><span style={{ marginRight: "18px" }}>👣</span>History</a>
-              </li>
+          <li className="list-item">
+            <a className="list-link" href="/history"><span style={{ marginRight: "18px" }}>👣</span>History</a>
+          </li>
         </ul>
       )}
       {open && title === "Kitchen" && (
@@ -71,17 +71,26 @@ function ToggleList({ title }) {
           <li className="list-item">
             <a className="list-link" href="#/action-3"><span style={{ marginRight: "18px" }}>🔥</span>Trending</a>
           </li>
+          {/* Admin-only menu item */}
+          {isAdmin && (
+            <li className="list-item">
+              <a className="list-link" href="/admin/hidden-recipes">
+                <span style={{ marginRight: "18px" }}>🙈</span>
+                Blocked
+              </a>
+            </li>
+          )}
           <li className="list-item">
             <button
-            onClick={() => openGoogleMaps()}
-            style={{
-              border: 'none',
-              backgroundColor: "inherit",
-            }}
-			className="list-link"
-			>
-				<span style={{ marginRight: "18px" }}>🥕</span>Resources
-			</button>
+              onClick={() => openGoogleMaps()}
+              style={{
+                border: 'none',
+                backgroundColor: "inherit",
+              }}
+              className="list-link"
+            >
+              <span style={{ marginRight: "18px" }}>🥕</span>Resources
+            </button>
           </li>
         </ul>
       )}
@@ -110,49 +119,49 @@ function Contact({ user }) {
     </Row>
   );
 }
-  // Open Google Maps directly. If geolocation is available and permitted, center on user's location.
-  const openGoogleMaps = (query = "grocery store") => {
-    const q = encodeURIComponent(query || "grocery store");
+// Open Google Maps directly. If geolocation is available and permitted, center on user's location.
+const openGoogleMaps = (query = "grocery store") => {
+  const q = encodeURIComponent(query || "grocery store");
 
-    const openUrl = (lat, lng) => {
-      let url;
-      if (lat != null && lng != null) {
-        url = `https://www.google.com/maps/search/${q}/@${lat},${lng},14z`;
-      } else {
-        url = `https://www.google.com/maps/search/${q}`;
-      }
-      window.open(url, "_blank");
-    };
-
-    if (typeof navigator !== "undefined" && navigator.geolocation) {
-      const called = { v: false };
-      const timer = setTimeout(() => {
-        if (!called.v) {
-          called.v = true;
-          openUrl(); // fallback without coords
-        }
-      }, GEOLOCATION_TIMEOUT);
-
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          if (called.v) return;
-          called.v = true;
-          clearTimeout(timer);
-          openUrl(pos.coords.latitude, pos.coords.longitude);
-        },
-        (err) => {
-          if (called.v) return;
-          called.v = true;
-          clearTimeout(timer);
-          openUrl();
-        },
-        { enableHighAccuracy: true, timeout: 7000 }
-      );
+  const openUrl = (lat, lng) => {
+    let url;
+    if (lat != null && lng != null) {
+      url = `https://www.google.com/maps/search/${q}/@${lat},${lng},14z`;
     } else {
-      // No geolocation available
-      openUrl();
+      url = `https://www.google.com/maps/search/${q}`;
     }
+    window.open(url, "_blank");
   };
+
+  if (typeof navigator !== "undefined" && navigator.geolocation) {
+    const called = { v: false };
+    const timer = setTimeout(() => {
+      if (!called.v) {
+        called.v = true;
+        openUrl(); // fallback without coords
+      }
+    }, GEOLOCATION_TIMEOUT);
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (called.v) return;
+        called.v = true;
+        clearTimeout(timer);
+        openUrl(pos.coords.latitude, pos.coords.longitude);
+      },
+      (err) => {
+        if (called.v) return;
+        called.v = true;
+        clearTimeout(timer);
+        openUrl();
+      },
+      { enableHighAccuracy: true, timeout: 7000 }
+    );
+  } else {
+    // No geolocation available
+    openUrl();
+  }
+};
 export default function Home() {
   const router = useRouter();
   const [userPosts, setUserPosts] = useState([]);
@@ -160,6 +169,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [followingUsers, setFollowingUsers] = useState([]);
+  const isAdmin = currentUser?.isAdmin === true;
 
   // Fetch current user and their posts
   useEffect(() => {
@@ -167,7 +177,7 @@ export default function Home() {
       try {
         // Get the token from localStorage
         const token = localStorage.getItem("userToken");
-        
+
         if (!token) {
           console.error("No token found, redirecting to login");
           router.push("/login");
@@ -184,7 +194,7 @@ export default function Home() {
           const user = await userResponse.json();
           console.log('User data:', user); // Debug log
           setCurrentUser(user);
-          
+
           // Fetch detailed info about users the current user is following
           if (user.following && user.following.length > 0) {
             try {
@@ -208,7 +218,7 @@ export default function Home() {
           } else {
             setFollowingUsers([]);
           }
-          
+
           // Fetch user's posts using their ID
           const postsResponse = await fetch(`/api/users/${user.id}/posts`);
           if (postsResponse.ok) {
@@ -223,14 +233,14 @@ export default function Home() {
             } else {
               console.error("Posts response is not an array:", posts);
               setUserPosts([]);
-              return; 
+              return;
             }
             let blockedPosts = [];
             let blockedUsers = [];
             try {
               const blocksRes = await fetch("/api/users/blocks", {
                 headers: {
-                  Authorization: `Bearer ${token}`, 
+                  Authorization: `Bearer ${token}`,
                 },
               });
 
@@ -277,7 +287,7 @@ export default function Home() {
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
-        setUserPosts([]); 
+        setUserPosts([]);
       } finally {
         setLoading(false);
       }
@@ -296,9 +306,9 @@ export default function Home() {
       <Row className="mainpage">
         <Col md={2} className="mainpage-left">
           <p className="left-right-title">Feed</p>
-          <ToggleList title="Discover" />
-          <ToggleList title="Personal" />
-          <ToggleList title="Kitchen" />
+          <ToggleList title="Discover" isAdmin={isAdmin} />
+          <ToggleList title="Personal" isAdmin={isAdmin} />
+          <ToggleList title="Kitchen" isAdmin={isAdmin} />
           <Row className="d-flex justify-content-center m-3" >
             <button
               className="post-button "
@@ -335,9 +345,9 @@ export default function Home() {
             <p style={{ fontWeight: "bold", fontSize: "24px" }}>Following</p>
             {followingUsers.length > 0 ? (
               followingUsers.map((user) => (
-                <Contact 
-                  key={user._id} 
-                  user={user} 
+                <Contact
+                  key={user._id}
+                  user={user}
                 />
               ))
             ) : (

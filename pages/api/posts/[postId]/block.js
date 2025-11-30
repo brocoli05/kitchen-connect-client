@@ -1,5 +1,5 @@
 // pages/api/posts/[postId]/block.js
-// POST: toggle block for a post or its author
+// POST: block / unblock a post for the current user only
 
 import jwt from "jsonwebtoken";
 import clientPromise from "@/lib/mongodb";
@@ -24,102 +24,60 @@ export default async function handler(req, res) {
   }
 
   const { postId } = req.query;
-  if (!postId || postId.length !== 24) {
+  if (!postId || !ObjectId.isValid(postId)) {
     return res.status(400).json({ message: "Invalid postId" });
   }
 
-  const { scope } = req.body || {};
-  // scope can be "post" or "author"
-  if (scope !== "post" && scope !== "author") {
-    return res.status(400).json({ message: "Scope must be 'post' or 'author'" });
-  }
-
-  const me = new ObjectId(decoded.userId);
+  const userId = new ObjectId(decoded.userId);
   const postObjectId = new ObjectId(postId);
 
   try {
     const client = await clientPromise;
     const db = client.db("kitchen-connect");
 
-    const usersColl = db.collection("users");
-    const postsColl = db.collection("posts");
+    // Make sure the post exists
+    const postDoc = await db
+      .collection("posts")
+      .findOne({ _id: postObjectId }, { projection: { _id: 1 } });
 
-    // Ensure user document exists and has blocked arrays
-    await usersColl.updateOne(
-      { _id: me },
-      {
-        $setOnInsert: {
-          blockedPosts: [],
-          blockedUsers: [],
-        },
-      },
-      { upsert: true }
-    );
+    if (!postDoc) {
+      return res.status(404).json({ message: "Post not found" });
+    }
 
-    const userDoc = await usersColl.findOne(
-      { _id: me },
-      { projection: { blockedPosts: 1, blockedUsers: 1 } }
-    );
+    // Check if already blocked
+    const me = await db
+      .collection("users")
+      .findOne({ _id: userId }, { projection: { blockedPosts: 1 } });
 
-    const blockedPosts = Array.isArray(userDoc?.blockedPosts)
-      ? userDoc.blockedPosts.map((id) => id.toString())
-      : [];
-    const blockedUsers = Array.isArray(userDoc?.blockedUsers)
-      ? userDoc.blockedUsers.map((id) => id.toString())
-      : [];
+    const alreadyBlocked =
+      me?.blockedPosts?.some((id) => String(id) === String(postObjectId)) ||
+      false;
 
-    let targetUserId = null;
-
-    if (scope === "author") {
-      const postDoc = await postsColl.findOne(
-        { _id: postObjectId },
-        { projection: { authorId: 1 } }
+    if (alreadyBlocked) {
+      // Unblock for this user
+      await db.collection("users").updateOne(
+        { _id: userId },
+        { $pull: { blockedPosts: postObjectId } }
       );
 
-      if (!postDoc) {
-        return res.status(404).json({ message: "Post not found" });
-      }
-
-      if (!postDoc.authorId) {
-        return res.status(400).json({ message: "Post has no authorId" });
-      }
-
-      targetUserId = new ObjectId(postDoc.authorId);
-    }
-
-    let update;
-    let blockedNow = false;
-
-    if (scope === "post") {
-      const isBlocked = blockedPosts.includes(postObjectId.toString());
-      if (isBlocked) {
-        // unblock post
-        update = { $pull: { blockedPosts: postObjectId } };
-        blockedNow = false;
-      } else {
-        // block post
-        update = { $addToSet: { blockedPosts: postObjectId } };
-        blockedNow = true;
-      }
+      return res.status(200).json({
+        blocked: false,
+        message: "Post unblocked for this user.",
+      });
     } else {
-      const isBlocked = blockedUsers.includes(targetUserId.toString());
-      if (isBlocked) {
-        update = { $pull: { blockedUsers: targetUserId } };
-        blockedNow = false;
-      } else {
-        update = { $addToSet: { blockedUsers: targetUserId } };
-        blockedNow = true;
-      }
+      // Block for this user
+      await db.collection("users").updateOne(
+        { _id: userId },
+        { $addToSet: { blockedPosts: postObjectId } }
+      );
+
+      return res.status(200).json({
+        blocked: true,
+        message: "Post blocked and will be hidden for this user.",
+      });
     }
-
-    await usersColl.updateOne({ _id: me }, update);
-
-    return res.status(200).json({
-      scope,
-      blocked: blockedNow,
-    });
   } catch (err) {
-    console.error("block post/author error", err);
+    console.error("block post error", err);
     return res.status(500).json({ message: "Internal Server Error" });
   }
 }
