@@ -211,6 +211,24 @@ export default async function handler(req, res) {
       } catch (e) {
         console.warn("Failed to record repost in history", e);
       }
+
+      // Create notification for original post author
+      try {
+        const authorId = original.authorId || original.userId;
+        if (authorId && !new ObjectId(authorId).equals(userObjectId)) {
+          const actingUser = await users.findOne({ _id: userObjectId }, { projection: { username: 1 } });
+          const username = actingUser?.username || 'Someone';
+          const message = `${username} reposted your post - "${original.title || 'Untitled'}"`;
+          await db.collection('notifications').insertOne({
+            userId: new ObjectId(authorId),
+            message,
+            postId: original._id,
+            createdAt: new Date(),
+          });
+        }
+      } catch (e) {
+        console.warn("Failed to create repost notification", e);
+      }
     }
 
     // 3) Return fresh status
