@@ -106,8 +106,8 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
   const [repostCount, setRepostCount] = useState(
     typeof initialPost?.repostCount === "number" ? initialPost.repostCount : 0
   );
-  const includeList = resolveList(post?.includeIngredients, post?.include);
-  const excludeList = resolveList(post?.excludeIngredients, post?.exclude);
+  const post = postData;
+  const postId = post?.id;
   const metaCardStyle = {
     flex: "1 1 180px",
     border: "1px solid #eee",
@@ -126,8 +126,6 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
       : "Not specified";
   const difficultyLabel = post?.difficulty || "Not specified";
   const dietaryLabel = post?.dietary || "Not specified";
-  const includeDisplay = includeList.length ? includeList.join(", ") : "None";
-  const excludeDisplay = excludeList.length ? excludeList.join(", ") : "None";
   const [errors, setErrors] = useState({});
   const [isFavorited, setIsFavorited] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -136,9 +134,6 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
   const [showReportModal, setShowReportModal] = useState(false);
   const [blocking, setBlocking] = useState(false);
   const [blockedPost, setBlockedPost] = useState(false);
-
-  const post = postData;
-  const postId = post?.id;
   const currentUrl =
     typeof window !== "undefined"
       ? window.location.href
@@ -275,8 +270,6 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
           setIsOwner(true);
         } else {
           setIsOwner(false);
-        } else {
-          setIsOwner(false);
         }
       })
       .catch(() => { });
@@ -398,21 +391,6 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
       dietary: dietaryTags.join(", "),
       include: includeCsv,
       exclude: excludeCsv,
-    };
-
-    setErrors({});
-    setIsSaving(true);
-
-    const includeList = splitInputList(form.include);
-    const excludeList = splitInputList(form.exclude);
-    const payload = {
-      title: trimmedTitle,
-      content: trimmedContent,
-      timeMax: parsedTime ?? "",
-      difficulty: form.difficulty,
-      dietary: dietaryTags.join(", "),
-      include: includeList.join(", "),
-      exclude: excludeList.join(", "),
     };
 
     const token =
