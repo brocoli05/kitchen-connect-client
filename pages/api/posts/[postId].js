@@ -334,7 +334,7 @@ export default async function handler(req, res) {
         title: title.trim(),
         content: content.trim(),
         updatedAt: new Date(),
-        ...updates, // Include all fields from the `updates` object
+        ...updates,
       };
 
       // If photo uploaded, store as base64 in DB (works on deployed hosts)
@@ -406,7 +406,7 @@ export default async function handler(req, res) {
 
     return res.status(405).json({ message: "Method not allowed" });
   } catch (e) {
-    console.error("[POSTS /api/posts/:postId]", e);
+    console.error("[/api/posts/:postId]", e);
     return res.status(500).json({ message: "Internal server error" });
   }
 }

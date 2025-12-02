@@ -8,7 +8,6 @@ import api from "../../utils/api";
 import TopNavBar from "@/components/TopNavBar";
 import { Row, Col } from "react-bootstrap";
 import st from "@/styles/createPost.module.css";
-import Head from "next/head";
 import ReportPostModal from "@/components/ReportPostModal";import RecommendationsSection from "@/components/RecommendationsSection";
 
 
@@ -44,8 +43,6 @@ const sharePost = async (title, url, onFallbackNeeded) => {
     onFallbackNeeded();
   }
 };
-
-const GEOLOCATION_TIMEOUT = 8000;
 
 const DIFFICULTY_OPTIONS = ["", "Easy", "Medium", "Hard"];
 
@@ -86,41 +83,24 @@ const splitInputList = (value) =>
     .filter(Boolean);
 
 const createFormState = (source = {}) => ({
-  title: source.title || "",
-  content: source.content || "",
-  time: formatTimeValue(source.timeMax),
-  difficulty: source.difficulty || "",
-  dietary: typeof source.dietary === "string" ? source.dietary : "",
-  include: formatListForInput(source.includeIngredients, source.include),
-  exclude: formatListForInput(source.excludeIngredients, source.exclude),
+  title: source?.title || "",
+  content: source?.content || "",
+  time: formatTimeValue(source?.timeMax),
+  difficulty: source?.difficulty || "",
+  dietary: typeof source?.dietary === "string" ? source.dietary : "",
+  include: formatListForInput(source?.includeIngredients, source?.include),
+  exclude: formatListForInput(source?.excludeIngredients, source?.exclude),
 });
 
 export default function PostPage({ post: initialPost, notFound, postIdFromProps }) {
+  const router = useRouter();
   const [postData, setPostData] = useState(initialPost);
   const [form, setForm] = useState(() => createFormState(initialPost));
   const [isSaving, setIsSaving] = useState(false);
-  const post = postData;
-  const postId = post?.id;
-  const router = useRouter();
-
-  if (notFound || !post) {
-    return (
-      <>
-        <TopNavBar />
-        <div style={{ textAlign: 'center', padding: '50px' }}>
-          <h1>Post not found</h1>
-          <p>The post you're looking for doesn't exist.</p>
-          <Link href="/">Go back home</Link>
-        </div>
-      </>
-    );
-  }
-
-  const [currentUser, setCurrentUser] = useState(null);
   const [isOwner, setIsOwner] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(
-    typeof post.likeCount === "number" ? post.likeCount : 0
+    typeof initialPost?.likeCount === "number" ? initialPost.likeCount : 0
   );
   const [isEditing, setIsEditing] = useState(false);
   const [isReposted, setIsReposted] = useState(false);
@@ -154,16 +134,31 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
   const [selectedImage, setSelectedImage] = useState(null);
   const [showShareOptions, setShowShareOptions] = useState(false);
   const likingRef = useRef(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [blocking, setBlocking] = useState(false);
+  const [blockedPost, setBlockedPost] = useState(false);
   const currentUrl =
     typeof window !== "undefined"
       ? window.location.href
       : `https://kitchen-connect-client.vercel.app/posts/${postIdFromProps}`;
-  const shareUrls = getSocialShareUrls(post.title, currentUrl);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [blocking, setBlocking] = useState(false);
-  const [blockedPost, setBlockedPost] = useState(false);
-  const [blockedAuthor, setBlockedAuthor] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const shareUrls = getSocialShareUrls(post?.title || "", currentUrl);
+  const includeList = resolveList(post?.includeIngredients, post?.include);
+  const excludeList = resolveList(post?.excludeIngredients, post?.exclude);
+  const includeDisplay = includeList.length ? includeList.join(", ") : "None";
+  const excludeDisplay = excludeList.length ? excludeList.join(", ") : "None";
+
+  if (notFound || !post) {
+    return (
+      <>
+        <TopNavBar />
+        <div style={{ textAlign: "center", padding: "50px" }}>
+          <h1>Post not found</h1>
+          <p>The post you're looking for doesn't exist.</p>
+          <Link href="/">Go back home</Link>
+        </div>
+      </>
+    );
+  }
 
   // Repost
   useEffect(() => {
@@ -193,7 +188,6 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
     }
 
     const prev = { isReposted, repostCount };
-    // Optimistic UI
     setIsReposted(!isReposted);
     setRepostCount((c) => c + (isReposted ? -1 : 1));
 
@@ -206,7 +200,6 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
         setRepostCount(res.data.repostCount);
       }
     } catch (e) {
-      // rollback
       setIsReposted(prev.isReposted);
       setRepostCount(prev.repostCount);
       alert("Failed to update repost. Please try again.");
@@ -234,11 +227,19 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
   }, [postIdFromProps]);
 
   const handleLike = async () => {
+    // Debouncing pattern: likingRef is used to prevent multiple rapid like/unlike actions.
+    // If likingRef.current is true, a like/unlike request is already in progress.
+    // This avoids sending duplicate requests if the user clicks repeatedly.
+    if (likingRef.current) return;
+    likingRef.current = true;
+
     const token = localStorage.getItem("userToken");
     if (!token) {
       alert("Please log in to like this post.");
+      likingRef.current = false;
       return;
     }
+
     const prev = { isLiked, likeCount };
     setIsLiked(!isLiked);
     setLikeCount((c) => c + (isLiked ? -1 : 1));
@@ -247,12 +248,15 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
         headers: { Authorization: `Bearer ${token}` },
       });
       setIsLiked(!!res.data.isLiked);
-      if (typeof res.data.likeCount === "number")
+      if (typeof res.data.likeCount === "number") {
         setLikeCount(res.data.likeCount);
+      }
     } catch (e) {
       setIsLiked(prev.isLiked);
       setLikeCount(prev.likeCount);
       alert("Failed to update like. Please try again.");
+    } finally {
+      likingRef.current = false;
     }
   };
   useEffect(() => {
@@ -263,43 +267,20 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
     fetch(`/api/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        setCurrentUser(data);
-        if (
-          data &&
-          post?.authorId &&
-          String(data.id) === String(post.authorId)
-        ) {
+        const postAuthorId =
+          post?.authorId ??
+          post?.author?.id ??
+          post?.author?._id ??
+          post?.authorId;
+        if (data && postAuthorId && String(data.id) === String(postAuthorId)) {
           setIsOwner(true);
-        }
-        if (data && (data.role === "admin" || data.isAdmin === true)) {
-          setIsAdmin(true);
+        } else {
+          setIsOwner(false);
         }
       })
       .catch(() => { });
   }, [post]);
 
-  if (notFound || !post) {
-    return (
-      <div style={{ padding: 24 }}>
-        <p>Post not found.</p>
-        <Link href="/">← Back</Link>
-      </div>
-    );
-  }
-
-  useEffect(() => {
-    const token = localStorage.getItem("userToken");
-    if (!token) return;
-
-    try {
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      if (userInfo) {
-        setCurrentUser(userInfo);
-      }
-    } catch (error) {
-      console.error("Failed to parse user info:", error);
-    }
-  }, []);
 
   const handleDelete = async () => {
     const ok = window.confirm(
@@ -406,16 +387,16 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
     setErrors({});
     setIsSaving(true);
 
-    const includeList = splitInputList(form.include);
-    const excludeList = splitInputList(form.exclude);
+    const includeCsv = splitInputList(form.include).join(", ");
+    const excludeCsv = splitInputList(form.exclude).join(", ");
     const payload = {
       title: trimmedTitle,
       content: trimmedContent,
       timeMax: parsedTime ?? "",
       difficulty: form.difficulty,
       dietary: dietaryTags.join(", "),
-      include: includeList.join(", "),
-      exclude: excludeList.join(", "),
+      include: includeCsv,
+      exclude: excludeCsv,
     };
 
     const token =
@@ -461,10 +442,10 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
           dietary: data.dietary ?? "",
           includeIngredients: Array.isArray(data.includeIngredients)
             ? data.includeIngredients
-            : includeList,
+            : splitInputList(includeCsv),
           excludeIngredients: Array.isArray(data.excludeIngredients)
             ? data.excludeIngredients
-            : excludeList,
+            : splitInputList(excludeCsv),
         };
 
         setPostData(updatedPost);
@@ -632,39 +613,7 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
             </button>
             <button
               type="button"
-              onClick={async () => {
-                if (likingRef.current) return;
-                likingRef.current = true;
-
-                const token = localStorage.getItem("userToken");
-                if (!token) {
-                  console.warn("Please log in to like this post");
-                  likingRef.current = false;
-                  return;
-                }
-
-                try {
-                  const res = await api.post(
-                    `/posts/${postIdFromProps}/isLike`,
-                    null,
-                    { headers: { Authorization: `Bearer ${token}` } }
-                  );
-
-                  if (res?.data) {
-                    setIsLiked(!!res.data.isLiked);
-                    if (typeof res.data.likeCount === "number")
-                      setLikeCount(res.data.likeCount);
-                  }
-                } catch (err) {
-                  console.error(
-                    "like failed:",
-                    err?.response?.status,
-                    err?.response?.data || err.message
-                  );
-                } finally {
-                  likingRef.current = false;
-                }
-              }}
+              onClick={handleLike}
               style={{
                 padding: "8px 16px",
                 fontSize: 16,
@@ -869,7 +818,9 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
         >
           <div style={{ fontSize: 13, color: "#374151" }}>
             <strong style={{ display: "block", color: "#111827" }}>Cooking Time</strong>
-            {typeof post.timeMax === "number" && post.timeMax > 0 ? `${post.timeMax} min` : "—"}
+            {typeof post.timeMax === "number" && post.timeMax > 0
+              ? `${post.timeMax} min`
+              : "—"}
           </div>
           <div style={{ fontSize: 13, color: "#374151" }}>
             <strong style={{ display: "block", color: "#111827" }}>Difficulty</strong>
@@ -896,7 +847,7 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
           </div>
           <div style={{ fontSize: 13, color: "#374151" }}>
             <strong style={{ display: "block", color: "#111827" }}>Include</strong>
-            {post.includeIngredients || "—"}
+            {includeDisplay || "—"}
           </div>
           <div style={{ fontSize: 13, color: "#374151" }}>
             <strong style={{ display: "block", color: "#111827" }}>Exclude</strong>
@@ -989,7 +940,6 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
                   {errors.content && (
                     <div style={{ color: "red" }}>{errors.content}</div>
                   )}
-
                   <Row>
                     <Col style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       <label>Cooking Time (minutes)</label>
@@ -1002,9 +952,7 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
                         placeholder="e.g., 30"
                         className={st.input}
                       />
-                      {errors.time && (
-                        <div style={{ color: "red" }}>{errors.time}</div>
-                      )}
+                      {errors.time && <div style={{ color: "red" }}>{errors.time}</div>}
                     </Col>
                   </Row>
 
@@ -1154,21 +1102,6 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
         )}
 
         {/* --- COMMENT section --- */}
-        <div style={{ margin: "12px 0" }}>
-          <button
-            onClick={() => openGoogleMaps()}
-            style={{
-              background: "#2563eb",
-              color: "#fff",
-              padding: "8px 12px",
-              border: "none",
-              borderRadius: 6,
-              cursor: "pointer",
-            }}
-          >
-            Find nearby stores
-          </button>
-        </div>
         <hr style={{ margin: "40px 0", borderTop: "1px solid #ddd" }} />
 
         <section className="comments-section">
