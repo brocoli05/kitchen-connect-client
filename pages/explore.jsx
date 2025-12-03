@@ -1,4 +1,4 @@
-import TopNavBar from "@/components/TopNavBar";
+import Layout from "@/components/Layout";
 import React, { useEffect, useState } from "react";
 import { Row, Col } from "react-bootstrap";
 import { useRouter } from "next/router";
@@ -8,6 +8,7 @@ export default function Explore() {
   const router = useRouter();
   const [recipes, setRecipes] = useState([]);
   const [suggestedPosts, setSuggestedPosts] = useState([]);
+  const [followingUsers, setFollowingUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const itemsPerPage = 12;
@@ -126,143 +127,129 @@ export default function Explore() {
     return 0;
   });
 
-  return (
+  const MainContent = (
     <>
-      <TopNavBar />
-      <Row className="mainpage" style={{ marginTop: 20 }}>
-        {/* Left Section */}
-        <Col md={2} className="mainpage-left">
-          <p className="left-right-title">Pages</p>
-          <ul className="leftMenu">
-            <li onClick={() => router.push("/")}>Home</li>
-            <li onClick={() => router.push("/browse")}>Browse</li>
-            <li onClick={() => router.push("/explore")}>Explore</li>
-            <li onClick={() => router.push("/recipes")}>Recipes</li>
-          </ul>
-        </Col>
-
-        {/* Center Section */}
-        <Col md={7} className="mainpage-center" style={{ padding: 20 }}>
-          <h2 className="left-right-title">Explore</h2>
-          {loading ? (
-            <div style={{ textAlign: "center", padding: 50, color: "gray" }}>
-              Loading...
-            </div>
-          ) : (
-            <>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
+      <h2 className="left-right-title">Explore</h2>
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 50, color: "gray" }}>
+          Loading...
+        </div>
+      ) : (
+        <>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr
+                style={{
+                  backgroundColor: "#000",
+                  color: "#fff",
+                  fontWeight: 600,
+                }}
+              >
+                <th
+                  style={{
+                    padding: 12,
+                    textAlign: "left",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => toggleSort("title")}
+                >
+                  Title{" "}
+                  {sortField === "title"
+                    ? sortOrder === "asc"
+                      ? "🔼"
+                      : "🔽"
+                    : "↕️"}
+                </th>
+                <th
+                  style={{ padding: 12, cursor: "pointer" }}
+                  onClick={() => toggleSort("author")}
+                >
+                  Author{" "}
+                  {sortField === "author"
+                    ? sortOrder === "asc"
+                      ? "🔼"
+                      : "🔽"
+                    : "↕️"}
+                </th>
+                <th
+                  style={{ padding: 12, cursor: "pointer" }}
+                  onClick={() => toggleSort("createdAt")}
+                >
+                  Created Date{" "}
+                  {sortField === "createdAt"
+                    ? sortOrder === "asc"
+                      ? "🔼"
+                      : "🔽"
+                    : "↕️"}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {recipes.length > 0 ? (
+                sortedRecipes.map((item) => (
                   <tr
+                    key={item.id || item._id}
+                    style={{ borderBottom: "1px solid #e0e0e0" }}
+                  >
+                    <td style={{ padding: 12 }}>
+                      <Link href={`/posts/${item.id || item._id}`}>
+                        {item.title}
+                      </Link>
+                    </td>
+
+                    <td style={{ padding: 12 }}>
+                      {item.author && item.author.id ? (
+                        <Link
+                          href={`/users/${item.author.id}`}
+                          style={{
+                            fontWeight: 600,
+                            color: "#333",
+                            textDecoration: "underline",
+                          }}
+                        >
+                          {item.author.name || "Unknown"}
+                        </Link>
+                      ) : (
+                        <span style={{ fontWeight: 600, color: "#999" }}>
+                          Unknown
+                        </span>
+                      )}
+                    </td>
+
+                    <td style={{ padding: 12 }}>
+                      {item.createdAt
+                        ? new Date(item.createdAt).toLocaleDateString()
+                        : "N/A"}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={7}
                     style={{
-                      backgroundColor: "#000",
-                      color: "#fff",
-                      fontWeight: 600,
+                      textAlign: "center",
+                      padding: 20,
+                      color: "gray",
                     }}
                   >
-                    <th
-                      style={{
-                        padding: 12,
-                        textAlign: "left",
-                        cursor: "pointer",
-                      }}
-                      onClick={() => toggleSort("title")}
-                    >
-                      Title{" "}
-                      {sortField === "title"
-                        ? sortOrder === "asc"
-                          ? "🔼"
-                          : "🔽"
-                        : "↕️"}
-                    </th>
-                    <th
-                      style={{ padding: 12, cursor: "pointer" }}
-                      onClick={() => toggleSort("author")}
-                    >
-                      Author{" "}
-                      {sortField === "author"
-                        ? sortOrder === "asc"
-                          ? "🔼"
-                          : "🔽"
-                        : "↕️"}
-                    </th>
-                    <th
-                      style={{ padding: 12, cursor: "pointer" }}
-                      onClick={() => toggleSort("createdAt")}
-                    >
-                      Created Date{" "}
-                      {sortField === "createdAt"
-                        ? sortOrder === "asc"
-                          ? "🔼"
-                          : "🔽"
-                        : "↕️"}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recipes.length > 0 ? (
-                    sortedRecipes.map((item) => (
-                      <tr
-                        key={item.id || item._id}
-                        style={{ borderBottom: "1px solid #e0e0e0" }}
-                      >
-                        <td style={{ padding: 12 }}>
-                          <Link href={`/posts/${item.id || item._id}`}>
-                            {item.title}
-                          </Link>
-                        </td>
+                    No posts found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          {renderPagination()}
+        </>
+      )}
+    </>
+  );
 
-                        <td style={{ padding: 12 }}>
-                          {item.author && item.author.id ? (
-                            <Link
-                              href={`/users/${item.author.id}`}
-                              style={{
-                                fontWeight: 600,
-                                color: "#333",
-                                textDecoration: "underline",
-                              }}
-                            >
-                              {item.author.name || "Unknown"}
-                            </Link>
-                          ) : (
-                            <span style={{ fontWeight: 600, color: "#999" }}>
-                              Unknown
-                            </span>
-                          )}
-                        </td>
-
-                        <td style={{ padding: 12 }}>
-                          {item.createdAt
-                            ? new Date(item.createdAt).toLocaleDateString()
-                            : "N/A"}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan={7}
-                        style={{
-                          textAlign: "center",
-                          padding: 20,
-                          color: "gray",
-                        }}
-                      >
-                        No posts found
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-              {renderPagination()}
-            </>
-          )}
-        </Col>
-
-        {/* Right Section */}
-        <Col md={3} className="mainpage-right">
-          <p className="leftRightTitle">Suggested</p>
-        </Col>
-      </Row>
+  return (
+    <>
+      <Layout suggestedPosts={suggestedPosts} followingUsers={followingUsers}>
+        {MainContent}
+      </Layout>
     </>
   );
 }
