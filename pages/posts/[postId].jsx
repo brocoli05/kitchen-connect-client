@@ -143,6 +143,7 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
   const excludeList = resolveList(post?.excludeIngredients, post?.exclude);
   const includeDisplay = includeList.length ? includeList.join(", ") : "None";
   const excludeDisplay = excludeList.length ? excludeList.join(", ") : "None";
+  const dietaryTags = splitInputList(post?.dietary);
 
   if (notFound || !post) {
     return (
@@ -795,19 +796,34 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
           </div>
           <div style={{ fontSize: 13, color: "#374151" }}>
             <strong style={{ display: "block", color: "#111827" }}>Dietary</strong>
-            {post.dietary ? (
-              <span
+            {dietaryTags.length ? (
+              <div
                 style={{
-                  display: "inline-block",
-                  background: "#e0f2fe",
-                  color: "#0369a1",
-                  border: "1px solid #bae6fd",
-                  borderRadius: 9999,
-                  padding: "2px 8px",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 6,
+                  marginTop: 4,
                 }}
               >
-                {post.dietary}
-              </span>
+                {dietaryTags.map((tag, idx) => (
+                  <span
+                    key={`${tag}-${idx}`}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      background: "#e0f2fe",
+                      color: "#0369a1",
+                      border: "1px solid #bae6fd",
+                      borderRadius: 9999,
+                      padding: "2px 10px",
+                      fontWeight: 600,
+                      fontSize: 12,
+                    }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
             ) : (
               "—"
             )}
