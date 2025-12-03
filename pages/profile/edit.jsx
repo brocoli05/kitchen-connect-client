@@ -54,7 +54,7 @@ export default function ProfileEditPage() {
     };
 
     loadProfile();
-  }, [router]);
+  }, [router, setProfileImage]);
 
   const onChange = (e) => {
     const { name, value } = e.target;
@@ -167,7 +167,8 @@ export default function ProfileEditPage() {
         alert(data.message || "Failed to upload image");
         return;
       }
-      setProfileImage(`${data.imageUrl}?t=${Date.now()}`);
+      const img = data.imageUrl;
+      setProfileImage(img);
       setSelectedFile(null);
       alert("Profile image updated!");
     } catch (err) {
@@ -190,15 +191,22 @@ export default function ProfileEditPage() {
                     <div className={s.profile}>
                       <div className={s.avatar}>
                         {selectedFile ? (
-                          <div>
+                          <div style={{ marginTop: 60, marginLeft: 30 }}>
                             <img
-                              src={URL.createObjectURL(selectedFile)}
+                              src={
+                                selectedFile
+                                  ? URL.createObjectURL(selectedFile)
+                                  : profileImage
+                              }
                               alt="Preview"
                               className={s.profileImg}
                             />
-                            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                              <button onClick={uploadProfileImage} className={s.button}>
-                                Save Image
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button
+                                onClick={uploadProfileImage}
+                                className={s.button}
+                              >
+                                Save
                               </button>
                               <button
                                 type="button"
