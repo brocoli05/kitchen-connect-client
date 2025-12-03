@@ -119,26 +119,7 @@ export default function Home() {
 
   const MainContent = (
     <>
-<<<<<<< Updated upstream
       {/* <Row className="quick-post d-flex justify-content-center m-1">
-=======
-      <TopNavBar />
-      <Row className="mainpage">
-        <Col md={2} className="mainpage-left">
-          <p className="left-right-title">Feed</p>
-          <ToggleList title="Discover" />
-          {/* <ToggleList title="Personal" /> */}
-          <ToggleList title="Kitchen" isAdmin={isAdmin} />
-          <Row className="d-flex justify-content-center m-3" >
-            <button
-              className="post-button "
-              onClick={() => router.push("/posts/create")}
-            >
-              Post
-            </button>
-          </Row>
-        </Col>
->>>>>>> Stashed changes
 
             <Col
               md={10}
