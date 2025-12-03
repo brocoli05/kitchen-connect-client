@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import TopNavBar from "@/components/TopNavBar";
 import st from "@/styles/createPost.module.css";
 import api from "../../utils/api";
-import { Row, Col } from "react-bootstrap";
 import RecipeTitleInput from "@/components/RecipeTitleInput";
 
 export default function CreatePost() {
@@ -144,16 +143,38 @@ export default function CreatePost() {
   return (
     <>
       <TopNavBar />
-      <p className={st.page}>
-        <b>Writing a Post</b>
-      </p>
+      <main className={st.page}>
+        <form onSubmit={handleSubmit(submitForm)} className={st.form}>
+          <header className={st.pageHeader}>
+            <div>
+              <p className={st.eyebrow}>Create Post</p>
+              <h1 className={st.pageTitle}>Share your next recipe</h1>
+              <p className={st.pageSubtitle}>
+                Capture the story, ingredients, and steps so the community can cook along.
+              </p>
+            </div>
+            <div className={st.headerActions}>
+              <button
+                type="button"
+                className={`${st.button} ${st.secondaryButton}`}
+                onClick={cancelButton}
+              >
+                Discard
+              </button>
+            </div>
+          </header>
 
-      <form onSubmit={handleSubmit(submitForm)} className={st.form}>
-        {/* Use RecipeTitleInput which queries the existing /api/recipe-autocomplete route */}
-        Title: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
-        <RecipeTitleInput
-          value={titleValue}
-          onSelect={async (selection) => {
+          <section className={st.section}>
+            <div className={st.sectionHeading}>
+              <h2>Recipe Overview</h2>
+              <p>Start with a compelling title and an appetizing cover photo.</p>
+            </div>
+            <div className={st.fieldStack}>
+              <div className={st.fieldGroup}>
+                <label className={st.fieldLabel}>Recipe title</label>
+                <RecipeTitleInput
+                  value={titleValue}
+                  onSelect={async (selection) => {
             // selection can be either a string (legacy) or an object { id, title }
             if (!selection) return;
             let title =
@@ -281,197 +302,176 @@ export default function CreatePost() {
             }
           }}
           placeholder="Homemade Meat Lovers Pizza"
-          className="title"
+          className={st.input}
         />
-        {/* Hidden input is registered so react-hook-form still validates the title */}
         <input
           type="hidden"
           {...register("title", { required: true, maxLength: 35 })}
         />
         {errors.title?.type === "required" && (
-          <span className={`${st.titleError} inputErrorText`}>
-            This field is required
-          </span>
+          <span className={st.errorText}>This field is required</span>
         )}
         {errors.title?.type === "maxLength" && (
-          <span className={`${st.titleError2} inputErrorText`}>
+          <span className={st.errorText}>
             Title cannot contain more than 35 characters
           </span>
         )}
-
-        {/* Image Upload Section*/}
-        <Row className={st.imageUploadSection}>
-          <Col md={3}>
-            <label htmlFor="imageUpload">Add Photo (Optional):</label>
-          </Col>
-          <Col md={9}>
-            <input
-              type="file"
-              id="imageUpload"
-              accept="image/*"
-              onChange={handleImageChange}
-              style={{ margin: "10px 0", display: "block" }}
-            />
-            {/* Show selected file name and remove button */}
-            {selectedImage && (
-              <div
-                style={{
-                  marginTop: "10px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                }}
-              >
-                <span
-                  style={{
-                    color: "#28a745",
-                    fontSize: "14px",
-                    fontWeight: "500",
-                  }}
-                >
-                  ✓ {selectedImage.name}
-                </span>
-                <button
-                  type="button"
-                  onClick={removeImage}
-                  style={{
-                    background: "#dc3545",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    padding: "4px 8px",
-                    fontSize: "12px",
-                    cursor: "pointer",
-                  }}
-                >
-                  Remove
-                </button>
               </div>
-            )}
-          </Col>
-        </Row>
-        
 
-        <Row style={{ marginTop: "8px" }}>
-        <Col style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          <label>Cooking Time (minutes)</label>
-          <input
-            type="number"
-            min="0"
-            placeholder="e.g., 30"
-            value={time}
-            onChange={(e) => { setTime(e.target.value);
-              setValue("time", e.target.value, { shouldDirty: true });
-            }}
-            className={st.input}
-          />
-        </Col>
-      </Row>
-        {/* Difficulty / Dietary */}
-        <Row>
-          <Col style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <label>Difficulty</label>
-            <select
-              value={difficulty}
-              onChange={(e) => {
-                setDifficulty(e.target.value);
-                setValue("difficulty", e.target.value, { shouldDirty: true });
-              }}
-              className={st.input}
+              <div className={st.uploadCard}>
+                <div>
+                  <label className={st.fieldLabel} htmlFor="imageUpload">
+                    Cover photo (optional)
+                  </label>
+                  <p className={st.fieldHint}>JPG or PNG up to 5MB.</p>
+                </div>
+                <input
+                  type="file"
+                  id="imageUpload"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className={st.uploadInput}
+                />
+                {selectedImage && (
+                  <div className={st.fileBadgeRow}>
+                    <span className={st.fileBadge}>✓ {selectedImage.name}</span>
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className={st.removeButton}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className={st.section}>
+            <div className={st.sectionHeading}>
+              <h2>Cooking Details</h2>
+              <p>Help others understand the effort, dietary notes, and ingredients.</p>
+            </div>
+            <div className={st.metaGrid}>
+              <div className={st.fieldGroup}>
+                <label className={st.fieldLabel}>Cooking Time (minutes)</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="e.g., 30"
+                  value={time}
+                  onChange={(e) => {
+                    setTime(e.target.value);
+                    setValue("time", e.target.value, { shouldDirty: true });
+                  }}
+                  className={st.input}
+                />
+              </div>
+
+              <div className={st.fieldGroup}>
+                <label className={st.fieldLabel}>Difficulty</label>
+                <select
+                  value={difficulty}
+                  onChange={(e) => {
+                    setDifficulty(e.target.value);
+                    setValue("difficulty", e.target.value, { shouldDirty: true });
+                  }}
+                  className={st.input}
+                >
+                  <option value="">Select difficulty</option>
+                  <option value="Easy">Easy</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Hard">Hard</option>
+                </select>
+              </div>
+
+              <div className={st.fieldGroup}>
+                <label className={st.fieldLabel}>Dietary Tags</label>
+                <input
+                  type="text"
+                  value={dietary}
+                  onChange={(e) => {
+                    setDietary(e.target.value);
+                    setValue("dietary", e.target.value, { shouldDirty: true });
+                  }}
+                  placeholder="e.g., vegan, halal"
+                  className={st.input}
+                />
+                <p className={st.fieldHint}>Comma separated values.</p>
+              </div>
+
+              <div className={st.fieldGroup}>
+                <label className={st.fieldLabel}>Include Ingredients</label>
+                <input
+                  type="text"
+                  value={include}
+                  onChange={(e) => {
+                    setInclude(e.target.value);
+                    setValue("include", e.target.value, { shouldDirty: true });
+                  }}
+                  placeholder="e.g., chicken, cheese"
+                  className={st.input}
+                />
+                <p className={st.fieldHint}>What must be featured?</p>
+              </div>
+
+              <div className={st.fieldGroup}>
+                <label className={st.fieldLabel}>Exclude Ingredients</label>
+                <input
+                  type="text"
+                  value={exclude}
+                  onChange={(e) => {
+                    setExclude(e.target.value);
+                    setValue("exclude", e.target.value, { shouldDirty: true });
+                  }}
+                  placeholder="e.g., nuts, gluten"
+                  className={st.input}
+                />
+                <p className={st.fieldHint}>Call out allergens or preferences.</p>
+              </div>
+            </div>
+          </section>
+
+          <section className={st.section}>
+            <div className={st.sectionHeading}>
+              <h2>Method</h2>
+              <p>Share the story, ingredients, and step-by-step instructions.</p>
+            </div>
+            <div className={st.fieldGroup}>
+              <label className={st.fieldLabel}>Story & Instructions</label>
+              <textarea
+                className={`${st.textarea} ${errors.content ? st.hasError : ""}`}
+                placeholder="Here is a simple recipe to make a delicious meat lovers pizza..."
+                {...register("content", { required: true })}
+                rows={6}
+              />
+              {errors.content?.type === "required" && (
+                <span className={st.errorText}>This field is required</span>
+              )}
+            </div>
+          </section>
+
+          <input type="hidden" {...register("time")} value={time} />
+          <input type="hidden" {...register("difficulty")} value={difficulty} />
+          <input type="hidden" {...register("dietary")} value={dietary} />
+          <input type="hidden" {...register("include")} value={include} />
+          <input type="hidden" {...register("exclude")} value={exclude} />
+
+          <div className={st.footerActions}>
+            <button
+              type="button"
+              className={`${st.button} ${st.secondaryButton}`}
+              onClick={cancelButton}
             >
-              <option value="">Select difficulty</option>
-              <option value="Easy">Easy</option>
-              <option value="Medium">Medium</option>
-              <option value="Hard">Hard</option>
-            </select>
-          </Col>
-          <Col style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <label>Dietary</label>
-            <input
-              type="text"
-              value={dietary}
-              onChange={(e) => {
-                setDietary(e.target.value);
-                setValue("dietary", e.target.value, { shouldDirty: true });
-              }}
-              placeholder="e.g., vegan, halal"
-              className={st.input}
-            />
-          </Col>
-        </Row>
-
-        {/* Include / Exclude Ingredients */}
-        <Row style={{ marginTop: "8px" }}>
-          <Col style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <label>Include Ingredients</label>
-            <input
-              type="text"
-              value={include}
-              onChange={(e) => {
-                setInclude(e.target.value);
-                setValue("include", e.target.value, { shouldDirty: true });
-              }}
-              placeholder="e.g., chicken, cheese"
-              className={st.input}
-            />
-          </Col>
-          <Col style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <label>Exclude Ingredients</label>
-            <input
-              type="text"
-              value={exclude}
-              onChange={(e) => {
-                setExclude(e.target.value);
-                setValue("exclude", e.target.value, { shouldDirty: true });
-              }}
-              placeholder="e.g., nuts, gluten"
-              className={st.input}
-            />
-          </Col>
-        </Row>
-
-        {/* Hidden registered inputs */}
-        <input type="hidden" {...register("time")} value={time} />
-        <input type="hidden" {...register("difficulty")} value={difficulty} />
-        <input type="hidden" {...register("dietary")} value={dietary} />
-        <input type="hidden" {...register("include")} value={include} />
-        <input type="hidden" {...register("exclude")} value={exclude} />
-
-        <br />
-        Content: &nbsp; &nbsp; &nbsp; &nbsp;
-        <textarea
-          className={`${st.content} ${errors.content ? "inputError" : ""}`}
-          placeholder="Here is a simple recipe to make a delicious meat lovers pizza: ..."
-          {...register("content", { required: true })}
-          rows={6}
-          style={{
-            resize: "vertical",
-            minHeight: "120px",
-            maxHeight: "300px",
-          }}
-        />
-        {errors.content?.type === "required" && (
-          <span className={`${st.contentError} inputErrorText`}>
-            This field is required
-          </span>
-        )}
-
-        <br />
-        <br />
-        <div className={st.buttonGap}>
-          <button
-            className={st.cancelButton}
-            type="button"
-            onClick={cancelButton}
-          >
-            Cancel
-          </button>
-
-          <button className={st.submitButton} type="submit">
-            Post
-          </button>
-        </div>
-      </form>
+              Cancel
+            </button>
+            <button type="submit" className={`${st.button} ${st.primaryButton}`}>
+              Post Recipe
+            </button>
+          </div>
+        </form>
+      </main>
     </>
   );
 }
