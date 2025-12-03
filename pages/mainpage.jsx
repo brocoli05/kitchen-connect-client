@@ -13,7 +13,11 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [followingUsers, setFollowingUsers] = useState([]);
-  const isAdmin = currentUser?.isAdmin === true;
+  const isAdmin =
+  currentUser &&
+  (currentUser.isAdmin === true ||
+    currentUser.isAdmin === "true" ||
+    currentUser.role === "admin");
 
   // Fetch current user and their posts
   useEffect(() => {
