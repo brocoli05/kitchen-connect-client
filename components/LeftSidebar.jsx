@@ -160,7 +160,7 @@ export default function LeftSidebar({ isAdmin }) {
       <p className="left-right-title">Feed</p>
       <ToggleList title="Discover" />
       {/* <ToggleList title="Personal" /> */}
-      <ToggleList title="Kitchen" />
+      <ToggleList title="Kitchen" isAdmin={isAdmin} />
       <Row className="d-flex justify-content-center">
         <button
           className="post-button "

@@ -7,13 +7,14 @@ export default function Layout({
   children,
   suggestedPosts = [],
   followingUsers = [],
+  isAdmin,
 }) {
   return (
     <>
       <TopNavBar />
       <Row className="mainpage" style={{ padding: "20px 40px" }}>
         <Col md={2} className="mainpage-left">
-          <LeftSidebar />
+        <LeftSidebar isAdmin={isAdmin} />
         </Col>
         <Col md={7} className="mainpage-center">
           {children}
