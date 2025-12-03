@@ -4,6 +4,7 @@ import AuthForm from "../components/AuthForm";
 import api from "../utils/api";
 import { signIn, signOut, useSession } from "next-auth/react";
 
+
 const LoginPage = () => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
