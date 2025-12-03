@@ -5,6 +5,7 @@ import Col from "react-bootstrap/Col";
 import { Button, Dropdown } from "react-bootstrap";
 import { signOut } from "next-auth/react";
 import { useProfile } from "../context/ProfileContext";
+import TooltipButton from "./TooltipButton";
 
 export default function TopNavBar({}) {
   const router = useRouter();
@@ -83,45 +84,55 @@ export default function TopNavBar({}) {
           md={4}
           className="d-flex justify-content-end topnav-right d-flex align-items-center"
         >
-          <button
-            type="button"
-            style={iconButtonStyle}
-            onClick={() => router.push("/posts/favorite")}
-          >
-            ❤️
-          </button>
-          <button
-            type="button"
-            style={iconButtonStyle}
-            onClick={() => router.push("#/action-3")}
-          >
-            📙
-          </button>
-          <button
-            type="button"
-            style={iconButtonStyle}
-            onClick={() => router.push("/history")}
-          >
-            👣
-          </button>
-          <button
-            onClick={() => router.push("/profile/edit")}
-            className=" d-flex align-items-center h-100 justify-content-center btn btn-link"
-          >
-            <img
-              className="rounded-circle"
-              src={profileImage}
-              alt="User Avatar"
-              style={{ width: "35px", height: "35px" }}
-            />
-          </button>
+          <TooltipButton tooltip="Favourite">
+            <button
+              type="button"
+              style={iconButtonStyle}
+              onClick={() => router.push("/posts/favorite")}
+            >
+              🏷️
+            </button>
+          </TooltipButton>
+          {/* <TooltipButton tooltip="Saved">
+            <button
+              type="button"
+              style={iconButtonStyle}
+              onClick={() => router.push("#/action-3")}
+            >
+              📙
+            </button>
+          </TooltipButton> */}
+          <TooltipButton tooltip="History">
+            <button
+              type="button"
+              style={iconButtonStyle}
+              onClick={() => router.push("/history")}
+            >
+              👣
+            </button>
+          </TooltipButton>
+          <TooltipButton tooltip="Profile">
+            <button
+              onClick={() => router.push("/profile/edit")}
+              className=" d-flex align-items-center h-100 justify-content-center btn btn-link"
+            >
+              <img
+                className="rounded-circle"
+                src={profileImage}
+                alt="User Avatar"
+                style={{ width: "35px", height: "35px" }}
+              />
+            </button>
+          </TooltipButton>
 
-          <button
-            style={{ ...iconButtonStyle, marginLeft: 0 }}
-            onClick={() => router.push("/profile/edit")}
-          >
-            ⚙️
-          </button>
+          <TooltipButton tooltip="Settings">
+            <button
+              style={{ ...iconButtonStyle, marginLeft: 0 }}
+              onClick={() => router.push("/profile/edit")}
+            >
+              ⚙️
+            </button>
+          </TooltipButton>
           {/* will add the logout to settings later */}
           {/* <Dropdown.Item onClick={handleLogout}>Logout</Dropdown.Item> */}
         </Col>
