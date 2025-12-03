@@ -36,10 +36,10 @@ function ToggleList({ title, isAdmin }) {
             </a>
           </li>
           <li className="list-item">
-            <a className="list-link" href="#/action-2">
+            <Link className="list-link" href="/browse">
               <span style={{ marginRight: "18px" }}>🔎</span>
               Browse
-            </a>
+            </Link>
           </li>
           <li className="list-item">
             <a className="list-link" href="/explore">
