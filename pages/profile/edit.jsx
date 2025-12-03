@@ -167,7 +167,8 @@ export default function ProfileEditPage() {
         alert(data.message || "Failed to upload image");
         return;
       }
-      setProfileImage(`${data.imageUrl}?t=${Date.now()}`);
+      const img = data.imageUrl;
+      setProfileImage(img);
       setSelectedFile(null);
       alert("Profile image updated!");
     } catch (err) {
