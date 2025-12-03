@@ -81,7 +81,7 @@ export default function UserPage({ user, posts, notFound }) {
       {/* Profile header */}
       <div style={{ display: "flex", gap: 16, alignItems: "center", marginTop: 12 }}>
         <img
-          src={user.avatarUrl || "/default-avatar.png"}
+          src={user.avatar || "/default-avatar.png"}
           alt=""
           style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", background: "#eee" }}
         />

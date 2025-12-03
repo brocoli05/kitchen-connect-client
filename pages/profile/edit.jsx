@@ -1,6 +1,5 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import AvatarEditor from "react-avatar-editor";
 import s from "@/styles/profile-edit.module.css";
 import TopNavBar from "@/components/TopNavBar";
 import ProfileLayout from "../../components/ProfileLayout";
@@ -19,9 +18,7 @@ export default function ProfileEditPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { profileImage, setProfileImage } = useProfile();
 
-  const editorRef = useRef(null);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [zoom, setZoom] = useState(1);
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
@@ -31,114 +28,52 @@ export default function ProfileEditPage() {
       return;
     }
 
-    fetch("/api/profile", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setCurrentUser(data);
-        setForm({
+    const loadProfile = async () => {
+      try {
+        const res = await fetch("/api/profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setForm((f) => ({
+          ...f,
           firstName: data.firstName || "",
           lastName: data.lastName || "",
           phone: data.phone || "",
           email: data.email || "",
-          username: data.username || "",
-        });
+          username: data.username || f.username || "",
+        }));
+        setCurrentUser(data);
+        // If profile image in context is empty, prefer server value
+        if (data.profileImage && !profileImage) {
+          setProfileImage(data.profileImage);
+        }
+      } catch (e) {
+        console.error("Failed to load profile:", e);
+      }
+    };
 
-        if (data.profileImage)
-          setProfileImage(`${data.profileImage}?t=${Date.now()}`);
-      })
-      .catch((error) => {
-        console.error("Failed to fetch user data:", error);
-      });
+    loadProfile();
   }, [router]);
 
   const onChange = (e) => {
     const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
-
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors({ ...errors, [name]: "" });
-    }
+    setForm((f) => ({ ...f, [name]: value }));
   };
 
   const validateForm = () => {
     const newErrors = {};
-
-    // Email validation
-    if (form.email && form.email.trim() !== "") {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(form.email)) {
-        newErrors.email = "Please enter a valid email address";
-      }
-    }
-
-    // Phone validation
-    if (form.phone && form.phone.trim() !== "") {
-      const cleanPhone = form.phone.replace(/[^\d+]/g, "");
-
-      // Canadian area codes
-      const canadianAreaCodes = [
-        204, 226, 236, 249, 250, 289, 306, 343, 365, 403, 416, 418, 431, 437,
-        438, 450, 506, 514, 519, 548, 579, 581, 587, 604, 613, 639, 647, 672,
-        705, 709, 742, 778, 780, 782, 807, 819, 825, 867, 873, 902, 905,
-      ];
-
-      let isValid = false;
-
-      if (cleanPhone.startsWith("+1")) {
-        // +1 followed by 10 digits (North American format)
-        const phoneDigits = cleanPhone.substring(2);
-        if (phoneDigits.length === 10) {
-          const areaCode = parseInt(phoneDigits.substring(0, 3));
-          isValid =
-            canadianAreaCodes.includes(areaCode) &&
-            /^[2-9]\d{2}[2-9]\d{2}\d{4}$/.test(phoneDigits);
-        }
-      } else if (cleanPhone.startsWith("+")) {
-        // Other international numbers
-        isValid =
-          cleanPhone.length >= 11 &&
-          cleanPhone.length <= 16 &&
-          /^(\+\d{1,3})?[1-9]\d{8,14}$/.test(cleanPhone);
-      } else {
-        // Default to Canadian format (10 digits)
-        if (cleanPhone.length === 10) {
-          const areaCode = parseInt(cleanPhone.substring(0, 3));
-          isValid =
-            canadianAreaCodes.includes(areaCode) &&
-            /^[2-9]\d{2}[2-9]\d{2}\d{4}$/.test(cleanPhone);
-        }
-      }
-
-      if (!isValid) {
-        newErrors.phone =
-          "Please enter a valid Canadian phone number (10 digits with valid area code, or international format)";
-      }
-    }
-
-    // Name validation
     const nameRegex = /^[a-zA-Z\s\-']{1,50}$/;
 
-    if (
-      form.firstName &&
-      form.firstName.trim() !== "" &&
-      !nameRegex.test(form.firstName)
-    ) {
-      newErrors.firstName =
-        "First name must be 1-50 characters and contain only letters, spaces, hyphens, and apostrophes";
+    if (form.firstName && !nameRegex.test(form.firstName)) {
+      newErrors.firstName = "Invalid first name";
     }
-
-    if (
-      form.lastName &&
-      form.lastName.trim() !== "" &&
-      !nameRegex.test(form.lastName)
-    ) {
-      newErrors.lastName =
-        "Last name must be 1-50 characters and contain only letters, spaces, hyphens, and apostrophes";
+    if (form.lastName && !nameRegex.test(form.lastName)) {
+      newErrors.lastName = "Invalid last name";
     }
-
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      newErrors.email = "Invalid email";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -203,41 +138,42 @@ export default function ProfileEditPage() {
     }
   };
 
-  const onZoomChange = (e) => {
-    setZoom(parseFloat(e.target.value));
-  };
+  const uploadProfileImage = async () => {
+    if (!selectedFile) {
+      alert("Please select an image file");
+      return;
+    }
+    if (!selectedFile.type.startsWith("image/")) {
+      alert("Please select an image file");
+      return;
+    }
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      alert("Image size must be less than 5MB");
+      return;
+    }
 
-  const uploadCroppedImage = async () => {
-    if (!editorRef.current) return;
+    const token = localStorage.getItem("userToken");
+    const formData = new FormData();
+    formData.append("photo", selectedFile, selectedFile.name || "profile.png");
 
-    const canvas = editorRef.current.getImage();
-
-    canvas.toBlob(async (blob) => {
-      const formData = new FormData();
-      formData.append("profileImage", blob, "profile.png");
-
-      const token = localStorage.getItem("userToken");
-      try {
-        const res = await fetch("/api/profile-image", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body: formData,
-        });
-
-        const data = await res.json();
-        if (!data.success || !data.imageUrl) {
-          alert(data.message || "Failed to upload image");
-          return;
-        }
-
-        setProfileImage(`${data.imageUrl}?t=${Date.now()}`);
-        setSelectedFile(null);
-        alert("Profile image updated!");
-      } catch (err) {
-        console.error(err);
-        alert("Failed to upload image");
+    try {
+      const res = await fetch("/api/profile-image", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.imageUrl) {
+        alert(data.message || "Failed to upload image");
+        return;
       }
-    }, "image/png");
+      setProfileImage(`${data.imageUrl}?t=${Date.now()}`);
+      setSelectedFile(null);
+      alert("Profile image updated!");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to upload image");
+    }
   };
 
   return (
@@ -254,35 +190,25 @@ export default function ProfileEditPage() {
                     <div className={s.profile}>
                       <div className={s.avatar}>
                         {selectedFile ? (
-                          <div className={s.editorWrapper}>
-                            <AvatarEditor
-                              ref={editorRef}
-                              image={selectedFile}
-                              width={120}
-                              height={120}
-                              border={0}
-                              borderRadius={60} // Circle
-                              color={[0, 0, 0, 0]}
-                              scale={zoom}
-                              rotate={0}
+                          <div>
+                            <img
+                              src={URL.createObjectURL(selectedFile)}
+                              alt="Preview"
+                              className={s.profileImg}
                             />
-                            <input
-                              type="range"
-                              min="0.5"
-                              max="3"
-                              step="0.01"
-                              value={zoom}
-                              onChange={(e) =>
-                                setZoom(parseFloat(e.target.value))
-                              }
-                              className={s.zoomSlider}
-                            />
-                            <button
-                              onClick={uploadCroppedImage}
-                              className={s.button}
-                            >
-                              Save Image
-                            </button>
+                            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                              <button onClick={uploadProfileImage} className={s.button}>
+                                Save Image
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedFile(null)}
+                                className={s.button}
+                                style={{ background: "#6b7280" }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <>

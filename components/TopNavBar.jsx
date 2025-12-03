@@ -29,7 +29,9 @@ export default function TopNavBar({}) {
         if (res.ok) {
           const data = await res.json();
           if (data && data.profileImage) {
-            setProfileImage(`${data.profileImage}?t=${Date.now()}`);
+            const img = data.profileImage;
+            const isDataUrl = typeof img === "string" && img.startsWith("data:");
+            setProfileImage(isDataUrl ? img : `${img}?t=${Date.now()}`);
           } else {
             setProfileImage("/avatar.png");
           }
