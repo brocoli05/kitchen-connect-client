@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
+import AvatarEditor from "react-avatar-editor";
 import s from "@/styles/profile-edit.module.css";
 import TopNavBar from "@/components/TopNavBar";
 import ProfileLayout from "../../components/ProfileLayout";
+import { useProfile } from "@/context/ProfileContext";
 
 export default function ProfileEditPage() {
   const router = useRouter();
@@ -15,6 +17,11 @@ export default function ProfileEditPage() {
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { profileImage, setProfileImage } = useProfile();
+
+  const editorRef = useRef(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [zoom, setZoom] = useState(1);
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
@@ -37,6 +44,9 @@ export default function ProfileEditPage() {
           email: data.email || "",
           username: data.username || "",
         });
+
+        if (data.profileImage)
+          setProfileImage(`${data.profileImage}?t=${Date.now()}`);
       })
       .catch((error) => {
         console.error("Failed to fetch user data:", error);
@@ -166,6 +176,13 @@ export default function ProfileEditPage() {
           email: responseData.email || "",
           username: responseData.username || f.username,
         }));
+
+        if (responseData.profileImage) {
+          setProfileImage(
+            `${responseData.profileImage}?t=${new Date().getTime()}`
+          );
+        }
+
         alert("Profile updated successfully!");
       } else {
         // Handle validation errors from server
@@ -179,6 +196,50 @@ export default function ProfileEditPage() {
     }
   };
 
+  // Handle image selection
+  const onFileChange = (e) => {
+    if (e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const onZoomChange = (e) => {
+    setZoom(parseFloat(e.target.value));
+  };
+
+  const uploadCroppedImage = async () => {
+    if (!editorRef.current) return;
+
+    const canvas = editorRef.current.getImage();
+
+    canvas.toBlob(async (blob) => {
+      const formData = new FormData();
+      formData.append("profileImage", blob, "profile.png");
+
+      const token = localStorage.getItem("userToken");
+      try {
+        const res = await fetch("/api/profile-image", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (!data.success || !data.imageUrl) {
+          alert(data.message || "Failed to upload image");
+          return;
+        }
+
+        setProfileImage(`${data.imageUrl}?t=${Date.now()}`);
+        setSelectedFile(null);
+        alert("Profile image updated!");
+      } catch (err) {
+        console.error(err);
+        alert("Failed to upload image");
+      }
+    }, "image/png");
+  };
+
   return (
     <>
       <TopNavBar />
@@ -189,124 +250,184 @@ export default function ProfileEditPage() {
               <div className={s.cardHead}>Edit Information</div>
               <div className={s.cardBody}>
                 <main>
-                  <div className={s.profile}>
-                    <div className={s.avatar}>IMG</div>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>
-                        {form.username || "Unknown"}{" "}
-                        <span style={{ color: "#6b7280" }}>(nickname)</span>
+                  <div className={s.contentContainer}>
+                    <div className={s.profile}>
+                      <div className={s.avatar}>
+                        {selectedFile ? (
+                          <div className={s.editorWrapper}>
+                            <AvatarEditor
+                              ref={editorRef}
+                              image={selectedFile}
+                              width={120}
+                              height={120}
+                              border={0}
+                              borderRadius={60} // Circle
+                              color={[0, 0, 0, 0]}
+                              scale={zoom}
+                              rotate={0}
+                            />
+                            <input
+                              type="range"
+                              min="0.5"
+                              max="3"
+                              step="0.01"
+                              value={zoom}
+                              onChange={(e) =>
+                                setZoom(parseFloat(e.target.value))
+                              }
+                              className={s.zoomSlider}
+                            />
+                            <button
+                              onClick={uploadCroppedImage}
+                              className={s.button}
+                            >
+                              Save Image
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <img
+                              src={profileImage}
+                              alt="Profile"
+                              className={s.profileImg}
+                            />
+                            <label
+                              htmlFor="profileImageInput"
+                              className={s.changeBtn}
+                            >
+                              Change
+                            </label>
+                          </>
+                        )}
+                        <input
+                          id="profileImageInput"
+                          type="file"
+                          accept="image/*"
+                          style={{ display: "none" }}
+                          onChange={onFileChange}
+                        />
                       </div>
-                      <div style={{ fontSize: 14, color: "#6b7280" }}>
-                        @{form.username || "unknown"}
+                      <div>
+                        <div style={{ fontWeight: 600 }}>
+                          {form.username || "Unknown"}{" "}
+                          <span style={{ color: "#6b7280" }}>(nickname)</span>
+                        </div>
+                        <div style={{ fontSize: 14, color: "#6b7280" }}>
+                          @{form.username || "unknown"}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <form
-                    onSubmit={onSubmit}
-                    className={s.form}
-                    aria-label="Edit profile form"
-                  >
-                    <div>
-                      <label className={s.label}>First name</label>
-                      <input
-                        className={`${s.input} ${
-                          errors.firstName ? s.error : ""
-                        }`}
-                        name="firstName"
-                        value={form.firstName}
-                        onChange={onChange}
-                        maxLength="50"
-                        placeholder="Enter your first name"
-                      />
-                      {errors.firstName && (
-                        <div
-                          style={{
-                            color: "red",
-                            fontSize: "12px",
-                            marginTop: "4px",
-                          }}
-                        >
-                          {errors.firstName}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <label className={s.label}>Last name</label>
-                      <input
-                        className={`${s.input} ${
-                          errors.lastName ? s.error : ""
-                        }`}
-                        name="lastName"
-                        value={form.lastName}
-                        onChange={onChange}
-                        maxLength="50"
-                        placeholder="Enter your last name"
-                      />
-                      {errors.lastName && (
-                        <div
-                          style={{
-                            color: "red",
-                            fontSize: "12px",
-                            marginTop: "4px",
-                          }}
-                        >
-                          {errors.lastName}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <label className={s.label}>Phone</label>
-                      <input
-                        className={`${s.input} ${errors.phone ? s.error : ""}`}
-                        name="phone"
-                        type="tel"
-                        value={form.phone}
-                        onChange={onChange}
-                        placeholder="(416) 123-4567"
-                      />
-                      {errors.phone && (
-                        <div
-                          style={{
-                            color: "red",
-                            fontSize: "12px",
-                            marginTop: "4px",
-                          }}
-                        >
-                          {errors.phone}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <label className={s.label}>Email</label>
-                      <input
-                        type="email"
-                        className={`${s.input} ${errors.email ? s.error : ""}`}
-                        name="email"
-                        value={form.email}
-                        onChange={onChange}
-                        placeholder="your.email@example.com"
-                      />
-                      {errors.email && (
-                        <div
-                          style={{
-                            color: "red",
-                            fontSize: "12px",
-                            marginTop: "4px",
-                          }}
-                        >
-                          {errors.email}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      type="submit"
-                      className={s.button}
-                      disabled={isSubmitting}
+                    <form
+                      onSubmit={onSubmit}
+                      className={s.form}
+                      aria-label="Edit profile form"
                     >
-                      {isSubmitting ? "Updating..." : "Update Information"}
-                    </button>
-                  </form>
+                      <div>
+                        <label className={s.label}>First name</label>
+                        <input
+                          className={`${s.input} ${
+                            errors.firstName ? s.error : ""
+                          }`}
+                          name="firstName"
+                          value={form.firstName}
+                          onChange={onChange}
+                          maxLength="50"
+                          placeholder="Enter your first name"
+                        />
+                        {errors.firstName && (
+                          <div
+                            style={{
+                              color: "red",
+                              fontSize: "12px",
+                              marginTop: "4px",
+                            }}
+                          >
+                            {errors.firstName}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className={s.label}>Last name</label>
+                        <input
+                          className={`${s.input} ${
+                            errors.lastName ? s.error : ""
+                          }`}
+                          name="lastName"
+                          value={form.lastName}
+                          onChange={onChange}
+                          maxLength="50"
+                          placeholder="Enter your last name"
+                        />
+                        {errors.lastName && (
+                          <div
+                            style={{
+                              color: "red",
+                              fontSize: "12px",
+                              marginTop: "4px",
+                            }}
+                          >
+                            {errors.lastName}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className={s.label}>Phone</label>
+                        <input
+                          className={`${s.input} ${
+                            errors.phone ? s.error : ""
+                          }`}
+                          name="phone"
+                          type="tel"
+                          value={form.phone}
+                          onChange={onChange}
+                          placeholder="(416) 123-4567"
+                        />
+                        {errors.phone && (
+                          <div
+                            style={{
+                              color: "red",
+                              fontSize: "12px",
+                              marginTop: "4px",
+                            }}
+                          >
+                            {errors.phone}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className={s.label}>Email</label>
+                        <input
+                          type="email"
+                          className={`${s.input} ${
+                            errors.email ? s.error : ""
+                          }`}
+                          name="email"
+                          value={form.email}
+                          onChange={onChange}
+                          placeholder="your.email@example.com"
+                        />
+                        {errors.email && (
+                          <div
+                            style={{
+                              color: "red",
+                              fontSize: "12px",
+                              marginTop: "4px",
+                            }}
+                          >
+                            {errors.email}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="submit"
+                        className={s.button}
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? "Updating..." : "Update Information"}
+                      </button>
+                    </form>
+                  </div>
                 </main>
               </div>
             </section>

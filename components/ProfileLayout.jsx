@@ -12,7 +12,7 @@ const ProfileLayout = ({ children, user }) => {
     try {
       const v = localStorage.getItem("aiDisabled");
       setAiDisabled(v === "true");
-    } catch { }
+    } catch {}
   }, []);
   // handleLogout must be inside the component
   const handleLogout = async () => {
@@ -77,7 +77,10 @@ const ProfileLayout = ({ children, user }) => {
             <ul style={{ padding: 0, marginTop: "20px" }}>
               {menuItems
                 .filter((item) => {
-                  if (user?.googleId && item.path === "/profile/change-password") {
+                  if (
+                    user?.googleId &&
+                    item.path === "/profile/change-password"
+                  ) {
                     return false;
                   }
                   return true;
@@ -98,7 +101,9 @@ const ProfileLayout = ({ children, user }) => {
                             padding: "8px 10px",
                             borderRadius: "4px",
                             fontWeight: isActive ? "bold" : "normal",
-                            backgroundColor: isActive ? "#f0f0f0" : "transparent",
+                            backgroundColor: isActive
+                              ? "#f0f0f0"
+                              : "transparent",
                             color: isActive ? "#333" : "#666",
                           }}
                         >
