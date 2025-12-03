@@ -42,7 +42,7 @@ function ToggleList({ title, isAdmin }) {
             </a>
           </li>
           <li className="list-item">
-            <a className="list-link" href="#/explore">
+            <a className="list-link" href="/explore">
               <span style={{ marginRight: "18px" }}>🌎</span>Explore
             </a>
           </li>
