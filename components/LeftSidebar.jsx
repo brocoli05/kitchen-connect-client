@@ -6,7 +6,7 @@ import PostCard from "@/components/PostCard";
 import Link from "next/link";
 const GEOLOCATION_TIMEOUT = 8000;
 
-function ToggleList({ title, isAdmin = false }) {
+function ToggleList({ title, isAdmin }) {
   const [open, setOpen] = useState(true);
   return (
     <div className="mainpage-left-toggle-list">
@@ -42,7 +42,7 @@ function ToggleList({ title, isAdmin = false }) {
             </a>
           </li>
           <li className="list-item">
-            <a className="list-link" href="/explore">
+            <a className="list-link" href="#/explore">
               <span style={{ marginRight: "18px" }}>🌎</span>Explore
             </a>
           </li>
@@ -160,7 +160,7 @@ export default function LeftSidebar({ isAdmin }) {
       <p className="left-right-title">Feed</p>
       <ToggleList title="Discover" />
       {/* <ToggleList title="Personal" /> */}
-      <ToggleList title="Kitchen" />
+      <ToggleList title="Kitchen" isAdmin={isAdmin} />
       <Row className="d-flex justify-content-center">
         <button
           className="post-button "

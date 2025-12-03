@@ -149,7 +149,11 @@ export default function Home() {
 
   return (
     <>
-      <Layout suggestedPosts={suggestedPosts} followingUsers={followingUsers}>
+      <Layout
+        suggestedPosts={suggestedPosts}
+        followingUsers={followingUsers}
+        isAdmin={isAdmin}
+      >
         {MainContent}
       </Layout>
     </>
