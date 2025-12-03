@@ -545,14 +545,14 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
               style={{
                 padding: "8px 16px",
                 fontSize: 16,
-                border: "1px solid #dc2626",
+                border: "none",
                 borderRadius: 4,
                 backgroundColor: "#fff",
                 color: "#dc2626",
                 cursor: "pointer",
               }}
             >
-              🚩 Report
+              🚩 
             </button>
 
             {/* Block post (toggle) */}
@@ -599,14 +599,14 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
               style={{
                 padding: "8px 16px",
                 fontSize: 16,
-                border: "1px solid #6b7280",
+                border: "none",
                 borderRadius: 4,
                 backgroundColor: blockedPost ? "#6b7280" : "#fff",
                 color: blockedPost ? "#fff" : "#374151",
                 cursor: blocking ? "default" : "pointer",
               }}
             >
-              {blockedPost ? "Blocked post" : "Block post"}
+              📛
             </button>
             <button
               type="button"
@@ -614,7 +614,7 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
               style={{
                 padding: "8px 16px",
                 fontSize: 16,
-                border: "1px solid #333",
+                border: "none",
                 borderRadius: 4,
                 backgroundColor: isLiked ? "#e11d48" : "#fff",
                 color: isLiked ? "#fff" : "#333",
@@ -622,7 +622,7 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
                 fontWeight: isLiked ? "bold" : "normal",
               }}
             >
-              ❤️ {isLiked ? "Liked" : "Like"}
+              {isLiked ? "🤍" : "❤️"}
               {typeof likeCount === "number" ? ` (${likeCount})` : ""}
             </button>
             <button
@@ -633,7 +633,7 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
               style={{
                 padding: "8px 16px",
                 fontSize: 16,
-                border: "1px solid #333",
+                border: "none",
                 borderRadius: 4,
                 backgroundColor: isReposted ? "#0ea5e9" : "#fff",
                 color: isOwner ? "#aaa" : isReposted ? "#fff" : "#333",
@@ -643,7 +643,7 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
                 opacity: isOwner ? 0.6 : 1,
               }}
             >
-              🔁 {isReposted ? "Reposted" : "Repost"}
+              🔁 
               {typeof repostCount === "number" ? ` (${repostCount})` : ""}
             </button>
             <div style={{ display: "flex", gap: 8, position: "relative" }}>
@@ -653,7 +653,7 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
                 style={{
                   padding: "8px 16px",
                   fontSize: 16,
-                  border: "1px solid #333",
+                  border: "none",
                   borderRadius: 4,
                   backgroundColor: isFavorited ? "#333" : "#fff",
                   color: isFavorited ? "#fff" : "#333",
@@ -661,7 +661,7 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
                   fontWeight: isFavorited ? "bold" : "normal",
                 }}
               >
-                {isFavorited ? "Saved" : "Save"}
+                🏷️
               </button>
 
               {/* Share Button */}
@@ -675,13 +675,13 @@ export default function PostPage({ post: initialPost, notFound, postIdFromProps 
                 style={{
                   padding: "8px 16px",
                   fontSize: 16,
-                  border: "1px solid #333",
+                  border: "none",
                   borderRadius: 4,
                   cursor: "pointer",
                   backgroundColor: "#fff",
                 }}
               >
-                🔗 Share
+                🔗 
               </button>
 
               {/* Share Options Popover */}
